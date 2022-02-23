@@ -6,6 +6,7 @@ using DSharpPlus.Lavalink;
 using DSharpPlus.Net;
 using MedicBot.Commands;
 using MedicBot.Manager;
+using MedicBot.Utils;
 using Microsoft.Extensions.Logging;
 using Serilog;
 
@@ -24,7 +25,7 @@ internal static class Program
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()
             .WriteTo.Console(
-                outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss zzz}] [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+                outputTemplate: Constants.SerilogOutputTemplate)
             .CreateLogger();
 
         var logFactory = new LoggerFactory().AddSerilog();
@@ -38,14 +39,14 @@ internal static class Program
         var lavalinkConfiguration = new LavalinkConfiguration
         {
             Password =
-                "5aJCTF!Z2&*853#79r7!xind*u^2LWy", // Lavalink only listens on 127.0.0.1, this is not a security concern.
+                Constants.LavalinkPassword, // Lavalink only listens on 127.0.0.1, this is not a security concern.
             RestEndpoint = lavalinkEndpoint,
             SocketEndpoint = lavalinkEndpoint
         };
 
         var discord = new DiscordClient(new DiscordConfiguration
         {
-            Token = Environment.GetEnvironmentVariable("Bot_Token_Dev"),
+            Token = Environment.GetEnvironmentVariable(Constants.BotTokenEnvironmentVariableName),
             LoggerFactory = logFactory
         });
         var lavalink = discord.UseLavalink();
@@ -55,7 +56,7 @@ internal static class Program
         // Commands
         var commands = discord.UseCommandsNext(new CommandsNextConfiguration
         {
-            StringPrefixes = new[] {"*"}
+            StringPrefixes = Constants.BotPrefixes
         });
         commands.RegisterCommands<BaseCommands>();
         commands.RegisterCommands<AudioCommands>();

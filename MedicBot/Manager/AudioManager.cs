@@ -2,6 +2,7 @@
 using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
 using DSharpPlus.Lavalink;
+using MedicBot.Utils;
 using Serilog;
 
 namespace MedicBot.Manager;
@@ -21,8 +22,8 @@ public static class AudioManager
         var lava = ctx.Client.GetLavalink();
         if (!lava.ConnectedNodes.Any())
         {
-            Log.Warning("JoinAsync() called before a Lavalink connection established");
-            await ctx.RespondAsync("Lavalink connection not established.");
+            Log.Warning(Constants.JoinAsyncLavalinkNotConnectedLog);
+            await ctx.RespondAsync(Constants.JoinAsyncLavalinkNotConnectedMessage);
             return;
         }
 
@@ -35,7 +36,7 @@ public static class AudioManager
             if (alternateChannel == null)
             {
                 Log.Warning("Not a voice channel: {Channel}", channel);
-                await ctx.RespondAsync("Not a voice channel.");
+                await ctx.RespondAsync(Constants.NotVoiceChannel);
                 return;
             }
 
@@ -55,7 +56,7 @@ public static class AudioManager
         var lava = Client.GetLavalink();
         if (!lava.ConnectedNodes.Any())
         {
-            Log.Warning("JoinAsync() called before a Lavalink connection established");
+            Log.Warning(Constants.JoinAsyncLavalinkNotConnectedLog);
             return;
         }
 
@@ -87,16 +88,16 @@ public static class AudioManager
         var lava = ctx.Client.GetLavalink();
         if (!lava.ConnectedNodes.Any())
         {
-            Log.Warning("LeaveAsync() called before a Lavalink connection established");
-            await ctx.RespondAsync("Lavalink connection not established.");
+            Log.Warning(Constants.LeaveAsyncLavalinkNotConnectedLog);
+            await ctx.RespondAsync(Constants.LeaveAsyncLavalinkNotConnectedMessage);
             return;
         }
 
         var connection = lava.GetGuildConnection(ctx.Guild);
         if (connection == null)
         {
-            Log.Warning("LeaveAsync() called when bot not in a voice channel");
-            await ctx.RespondAsync("Not connected to any channel.");
+            Log.Warning(Constants.NotConnectedToVoiceLog);
+            await ctx.RespondAsync(Constants.NotConnectedToVoiceMessage);
             return;
         }
 
@@ -110,7 +111,7 @@ public static class AudioManager
         var lava = Client.GetLavalink();
         if (!lava.ConnectedNodes.Any())
         {
-            Log.Warning("LeaveAsync() called before a Lavalink connection established");
+            Log.Warning(Constants.LeaveAsyncLavalinkNotConnectedLog);
             return;
         }
 
@@ -124,7 +125,7 @@ public static class AudioManager
         var connection = lava.GetGuildConnection(guild);
         if (connection == null)
         {
-            Log.Warning("LeaveAsync() called when bot not in a voice channel");
+            Log.Warning(Constants.NotConnectedToVoiceLog);
             return;
         }
 
