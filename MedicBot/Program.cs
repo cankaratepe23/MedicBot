@@ -28,42 +28,34 @@ internal static class Program
 
         var logFactory = new LoggerFactory().AddSerilog();
 
-        var lavalinkEndpoint = new ConnectionEndpoint()
+        var lavalinkEndpoint = new ConnectionEndpoint
         {
             Hostname = "127.0.0.1",
             Port = 2333
         };
 
-        var lavalinkConfiguration = new LavalinkConfiguration()
+        var lavalinkConfiguration = new LavalinkConfiguration
         {
-            Password = "5aJCTF!Z2&*853#79r7!xind*u^2LWy",
+            Password =
+                "5aJCTF!Z2&*853#79r7!xind*u^2LWy", // Lavlink only listens on 127.0.0.1, this is not a security concern.
             RestEndpoint = lavalinkEndpoint,
             SocketEndpoint = lavalinkEndpoint
         };
-        
-        var discord = new DiscordClient(new DiscordConfiguration()
+
+        var discord = new DiscordClient(new DiscordConfiguration
         {
             Token = Environment.GetEnvironmentVariable("Bot_Token_Dev"),
             LoggerFactory = logFactory
         });
         var lavalink = discord.UseLavalink();
-        
+
         // Commands
-        var commands = discord.UseCommandsNext(new CommandsNextConfiguration()
+        var commands = discord.UseCommandsNext(new CommandsNextConfiguration
         {
             StringPrefixes = new[] {"*"}
         });
         commands.RegisterCommands<BaseCommands>();
         commands.RegisterCommands<AudioCommands>();
-
-        // Events
-        discord.MessageCreated += async (s, e) =>
-        {
-            if (e.Message.Content.ToLower() == "ping")
-            {
-                await e.Message.RespondAsync("Pong!");
-            }
-        };
 
         // Startup
         await discord.ConnectAsync();
