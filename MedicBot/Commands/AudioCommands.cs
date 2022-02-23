@@ -1,8 +1,7 @@
-﻿using DSharpPlus;
-using DSharpPlus.CommandsNext;
+﻿using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
-using DSharpPlus.Lavalink;
+using MedicBot.Manager;
 
 namespace MedicBot.Commands;
 
@@ -13,25 +12,7 @@ public class AudioCommands : BaseCommandModule
     [Command("join")]
     public async Task JoinCommand(CommandContext ctx, DiscordChannel channel)
     {
-        var lava = ctx.Client.GetLavalink();
-        if (!lava.ConnectedNodes.Any())
-        {
-            // TODO Add logging
-            await ctx.RespondAsync("Lavalink connection not established.");
-            return;
-        }
-
-        if (channel.Type != ChannelType.Voice)
-        {
-            // TODO Add logging
-            await ctx.RespondAsync("Not a voice channel.");
-            return;
-        }
-
-        var node = lava.GetIdealNodeConnection();
-
-        await node.ConnectAsync(channel);
-        await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":thumbsup"));
+        await AudioManager.JoinAsync(ctx, channel);
     }
     // TODO Test leave functionality.
 }

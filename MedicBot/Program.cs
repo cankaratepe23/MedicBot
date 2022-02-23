@@ -5,6 +5,7 @@ using DSharpPlus.CommandsNext;
 using DSharpPlus.Lavalink;
 using DSharpPlus.Net;
 using MedicBot.Commands;
+using MedicBot.Manager;
 using Microsoft.Extensions.Logging;
 using Serilog;
 
@@ -49,6 +50,8 @@ internal static class Program
         });
         var lavalink = discord.UseLavalink();
 
+        AudioManager.Init(discord);
+
         // Commands
         var commands = discord.UseCommandsNext(new CommandsNextConfiguration
         {
@@ -60,5 +63,6 @@ internal static class Program
         // Startup
         await discord.ConnectAsync();
         await lavalink.ConnectAsync(lavalinkConfiguration);
+        await Task.Delay(-1);
     }
 }
