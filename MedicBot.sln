@@ -1,8 +1,16 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MedicBot", "MedicBot\MedicBot.csproj", "{DA5977DA-B45B-486C-8B77-BD8C2B0FC1DB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DA5977DA-B45B-486C-8B77-BD8C2B0FC1DB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA5977DA-B45B-486C-8B77-BD8C2B0FC1DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA5977DA-B45B-486C-8B77-BD8C2B0FC1DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA5977DA-B45B-486C-8B77-BD8C2B0FC1DB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
