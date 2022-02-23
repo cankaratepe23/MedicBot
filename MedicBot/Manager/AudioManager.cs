@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using DSharpPlus;
+﻿using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
 using DSharpPlus.Lavalink;
@@ -13,7 +12,7 @@ public static class AudioManager
 
     public static void Init(DiscordClient client)
     {
-        Client ??= client;
+        Client = client;
     }
 
     // Normally called by CommandsNext
@@ -22,20 +21,28 @@ public static class AudioManager
         var lava = ctx.Client.GetLavalink();
         if (!lava.ConnectedNodes.Any())
         {
-            Log.Warning("Join() called before a Lavalink connection established");
+            Log.Warning("JoinAsync() called before a Lavalink connection established");
             await ctx.RespondAsync("Lavalink connection not established.");
             return;
         }
 
         if (channel.Type != ChannelType.Voice)
         {
-            Log.Warning("Not a voice channel: {Channel}", channel);
-            await ctx.RespondAsync("Not a voice channel.");
-            return;
+            // Handle cases where one text and one voice channel may exist with the same name.
+            var alternateChannel = ctx.Guild.Channels.Values.FirstOrDefault(c =>
+                string.Equals(c.Name, channel.Name, StringComparison.CurrentCultureIgnoreCase) &&
+                c.Type == ChannelType.Voice);
+            if (alternateChannel == null)
+            {
+                Log.Warning("Not a voice channel: {Channel}", channel);
+                await ctx.RespondAsync("Not a voice channel.");
+                return;
+            }
+
+            channel = alternateChannel;
         }
 
         var node = lava.GetIdealNodeConnection();
-
         await node.ConnectAsync(channel);
         Log.Information("Voice connected to {Channel}", channel);
         await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":thumbsup"));
@@ -48,7 +55,7 @@ public static class AudioManager
         var lava = Client.GetLavalink();
         if (!lava.ConnectedNodes.Any())
         {
-            Log.Warning("Join() called before a Lavalink connection established");
+            Log.Warning("JoinAsync() called before a Lavalink connection established");
             return;
         }
 
@@ -58,19 +65,70 @@ public static class AudioManager
             Log.Warning("Guild with ID: {Id} not found", guildId);
             return;
         }
-        
+
         var mostCrowdedVoiceChannel = guild!.Channels.Values
             .Where(c => c.Type == ChannelType.Voice)
             .OrderByDescending(c => c.Users.Count(u => !u.IsBot))
             .FirstOrDefault();
         if (mostCrowdedVoiceChannel == null)
         {
-            Log.Warning("Join() couldn't find the most crowded channel in {Guild}", guild);
+            Log.Warning("JoinAsync() couldn't find the most crowded channel in {Guild}", guild);
             return;
         }
 
         var node = lava.GetIdealNodeConnection();
         await node.ConnectAsync(mostCrowdedVoiceChannel);
         Log.Information("Voice connected to {Channel}", mostCrowdedVoiceChannel);
+    }
+
+    // Called by CommandsNext
+    public static async Task LeaveAsync(CommandContext ctx)
+    {
+        var lava = ctx.Client.GetLavalink();
+        if (!lava.ConnectedNodes.Any())
+        {
+            Log.Warning("LeaveAsync() called before a Lavalink connection established");
+            await ctx.RespondAsync("Lavalink connection not established.");
+            return;
+        }
+
+        var connection = lava.GetGuildConnection(ctx.Guild);
+        if (connection == null)
+        {
+            Log.Warning("LeaveAsync() called when bot not in a voice channel");
+            await ctx.RespondAsync("Not connected to any channel.");
+            return;
+        }
+
+        await connection.DisconnectAsync();
+        Log.Information("Voice disconnected from {Channel}", connection.Channel);
+        await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":thumbsup"));
+    }
+
+    public static async Task LeaveAsync(ulong guildId)
+    {
+        var lava = Client.GetLavalink();
+        if (!lava.ConnectedNodes.Any())
+        {
+            Log.Warning("LeaveAsync() called before a Lavalink connection established");
+            return;
+        }
+
+        var guildExists = Client.Guilds.TryGetValue(guildId, out var guild);
+        if (!guildExists)
+        {
+            Log.Warning("Guild with ID: {Id} not found", guildId);
+            return;
+        }
+
+        var connection = lava.GetGuildConnection(guild);
+        if (connection == null)
+        {
+            Log.Warning("LeaveAsync() called when bot not in a voice channel");
+            return;
+        }
+
+        await connection.DisconnectAsync();
+        Log.Information("Voice disconnected from {Channel}", connection.Channel);
     }
 }
