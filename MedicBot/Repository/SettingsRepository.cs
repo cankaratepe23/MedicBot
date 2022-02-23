@@ -1,24 +1,35 @@
 ﻿using LiteDB;
 using MedicBot.Model;
 using MedicBot.Utils;
+using Serilog;
 
 namespace MedicBot.Repository;
 
 public static class SettingsRepository
 {
+    static SettingsRepository()
+    {
+        // Ensure db and collection is created.
+        using var db = new LiteDatabase(Constants.LiteDatabasePath);
+        db.GetCollection<BotSetting>();
+        Log.Information(Constants.DbCollectionInitializedBotSettings);
+    }
+
     public static BotSetting? GetBotSetting(string key)
     {
-        BotSetting botSetting;
-        // TODO Put connection string/filename somewhere global.
         using var db = new LiteDatabase(Constants.LiteDatabasePath);
-        // TODO Decide how to handle exceptions (key not found, etc.)
-        // ideally, they should be handled from a single location, i.e. here.
-        botSetting = db.GetCollection<BotSetting>().FindOne(s => s.Key == key);
-        return botSetting;
+        return db.GetCollection<BotSetting>().FindById(key);
     }
 
     public static void SetBotSetting(string key, string value)
     {
-        // TODO Test insert funcionality
+        using var db = new LiteDatabase(Constants.LiteDatabasePath);
+        db.GetCollection<BotSetting>().Upsert(new BotSetting(key, value));
+    }
+
+    public static void DeleteBotSetting(string key)
+    {
+        using var db = new LiteDatabase(Constants.LiteDatabasePath);
+        db.GetCollection<BotSetting>().Delete(key);
     }
 }

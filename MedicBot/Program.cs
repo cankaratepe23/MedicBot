@@ -4,8 +4,10 @@ using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.Lavalink;
 using DSharpPlus.Net;
+using LiteDB;
 using MedicBot.Commands;
 using MedicBot.Manager;
+using MedicBot.Model;
 using MedicBot.Utils;
 using Microsoft.Extensions.Logging;
 using Serilog;
@@ -19,6 +21,7 @@ internal static class Program
         ConfigureAsync().GetAwaiter().GetResult();
     }
 
+    // TODO Consider DI guide from DSharpPlus docs for CommandsNext
     private static async Task ConfigureAsync()
     {
         // Configuration
@@ -29,6 +32,10 @@ internal static class Program
             .CreateLogger();
 
         var logFactory = new LoggerFactory().AddSerilog();
+
+        var mapper = BsonMapper.Global;
+        mapper.Entity<BotSetting>()
+            .Id(s => s.Key);
 
         var lavalinkEndpoint = new ConnectionEndpoint
         {
@@ -60,6 +67,7 @@ internal static class Program
         });
         commands.RegisterCommands<BaseCommands>();
         commands.RegisterCommands<AudioCommands>();
+        commands.RegisterCommands<SettingsCommands>();
 
         // Startup
         await discord.ConnectAsync();

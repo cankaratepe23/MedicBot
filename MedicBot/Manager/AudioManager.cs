@@ -46,7 +46,7 @@ public static class AudioManager
         var node = lava.GetIdealNodeConnection();
         await node.ConnectAsync(channel);
         Log.Information("Voice connected to {Channel}", channel);
-        await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":thumbsup"));
+        await ctx.Message.RespondThumbsUpAsync();
     }
 
     // Join the voice channel with the largest number of connected non-bot users.
@@ -103,7 +103,7 @@ public static class AudioManager
 
         await connection.DisconnectAsync();
         Log.Information("Voice disconnected from {Channel}", connection.Channel);
-        await ctx.Message.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":thumbsup"));
+        await ctx.Message.RespondThumbsUpAsync();
     }
 
     public static async Task LeaveAsync(ulong guildId)

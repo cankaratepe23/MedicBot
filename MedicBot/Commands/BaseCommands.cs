@@ -6,6 +6,8 @@ using Serilog;
 
 namespace MedicBot.Commands;
 
+[Hidden]
+[RequireOwner]
 public class BaseCommands : BaseCommandModule
 {
     [Command("test")]
@@ -13,10 +15,9 @@ public class BaseCommands : BaseCommandModule
     {
         Log.Information("Test command called by {User}", ctx.User);
         await ctx.RespondAsync($"Test! Current time is: {DateTime.Now}");
-        var message = "";
 
         var botSetting = SettingsRepository.GetBotSetting(remainingText);
-        message = botSetting == null
+        var message = botSetting == null
             ? $"Could not find setting with key: \"{remainingText}\""
             : $"Found setting value: {botSetting}";
 
@@ -24,5 +25,12 @@ public class BaseCommands : BaseCommandModule
 
 
         await AudioManager.JoinAsync(463052720509812736);
+    }
+
+    [Command("shutdown")]
+    public async Task ShutdownBotCommand(CommandContext ctx)
+    {
+        await ctx.Client.DisconnectAsync();
+        Environment.Exit(0);
     }
 }
