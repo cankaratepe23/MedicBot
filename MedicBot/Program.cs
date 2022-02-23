@@ -37,7 +37,7 @@ internal static class Program
         var lavalinkConfiguration = new LavalinkConfiguration
         {
             Password =
-                "5aJCTF!Z2&*853#79r7!xind*u^2LWy", // Lavlink only listens on 127.0.0.1, this is not a security concern.
+                "5aJCTF!Z2&*853#79r7!xind*u^2LWy", // Lavalink only listens on 127.0.0.1, this is not a security concern.
             RestEndpoint = lavalinkEndpoint,
             SocketEndpoint = lavalinkEndpoint
         };
@@ -60,6 +60,5 @@ internal static class Program
         // Startup
         await discord.ConnectAsync();
         await lavalink.ConnectAsync(lavalinkConfiguration);
-        await Task.Delay(-1);
     }
 }
