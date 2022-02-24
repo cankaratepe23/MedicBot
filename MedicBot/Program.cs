@@ -1,4 +1,4 @@
-﻿using DSharpPlus;
+using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.Lavalink;
 using DSharpPlus.Net;
@@ -17,9 +17,9 @@ internal static class Program
     private static void Main(string[] args)
     {
         ConfigureAsync().GetAwaiter().GetResult();
+        
     }
 
-    // TODO Consider DI guide from DSharpPlus docs for CommandsNext
     private static async Task ConfigureAsync()
     {
         // Configuration
