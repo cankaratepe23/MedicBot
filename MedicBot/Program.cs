@@ -1,6 +1,4 @@
-﻿// See https://aka.ms/new-console-template for more information
-
-using DSharpPlus;
+﻿using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.Lavalink;
 using DSharpPlus.Net;
