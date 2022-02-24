@@ -17,12 +17,13 @@ internal static class Program
     private static void Main(string[] args)
     {
         ConfigureAsync().GetAwaiter().GetResult();
-        
     }
 
     private static async Task ConfigureAsync()
     {
         // Configuration
+        #region Logger Config
+
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()
             .WriteTo.Console(
@@ -31,9 +32,17 @@ internal static class Program
 
         var logFactory = new LoggerFactory().AddSerilog();
 
+        #endregion
+
+        #region LiteDB Config
+
         var mapper = BsonMapper.Global;
         mapper.Entity<BotSetting>()
             .Id(s => s.Key);
+
+        #endregion
+
+        #region Lavalink Config
 
         var lavalinkEndpoint = new ConnectionEndpoint
         {
@@ -49,6 +58,10 @@ internal static class Program
             SocketEndpoint = lavalinkEndpoint
         };
 
+        #endregion
+
+        #region Discord Client Config
+
         var discord = new DiscordClient(new DiscordConfiguration
         {
             Token = Environment.GetEnvironmentVariable(Constants.BotTokenEnvironmentVariableName),
@@ -56,9 +69,18 @@ internal static class Program
         });
         var lavalink = discord.UseLavalink();
 
+        #endregion
+
+        #region WebAppConfig
+        
+        // TODO
+
+        #endregion
+        
+        // Initializations
         AudioManager.Init(discord);
 
-        // Commands
+        // Commands Init
         var commands = discord.UseCommandsNext(new CommandsNextConfiguration
         {
             StringPrefixes = Constants.BotPrefixes
