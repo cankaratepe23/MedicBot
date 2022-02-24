@@ -1,5 +1,7 @@
 ﻿using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
+using DSharpPlus.Lavalink;
+using DSharpPlus.Net;
 using MedicBot.Manager;
 using MedicBot.Repository;
 using Serilog;
@@ -30,6 +32,8 @@ public class BaseCommands : BaseCommandModule
     [Command("shutdown")]
     public async Task ShutdownBotCommand(CommandContext ctx)
     {
+        // TODO Move this to Constants file or better yet, configuration file.
+        await ctx.Client.GetLavalink().GetNodeConnection(new ConnectionEndpoint("127.0.0.1", 2333)).StopAsync();
         await ctx.Client.DisconnectAsync();
         Environment.Exit(0);
     }
