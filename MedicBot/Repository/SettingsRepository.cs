@@ -15,19 +15,19 @@ public static class SettingsRepository
         Log.Information(Constants.DbCollectionInitializedBotSettings);
     }
 
-    public static BotSetting? GetBotSetting(string key)
+    public static BotSetting? Get(string key)
     {
         using var db = new LiteDatabase(Constants.LiteDatabasePath);
         return db.GetCollection<BotSetting>().FindById(key);
     }
 
-    public static void SetBotSetting(string key, string value)
+    public static void Set(string key, string value)
     {
         using var db = new LiteDatabase(Constants.LiteDatabasePath);
         db.GetCollection<BotSetting>().Upsert(new BotSetting(key, value));
     }
 
-    public static void DeleteBotSetting(string key)
+    public static void Delete(string key)
     {
         using var db = new LiteDatabase(Constants.LiteDatabasePath);
         db.GetCollection<BotSetting>().Delete(key);

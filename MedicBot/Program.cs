@@ -40,7 +40,7 @@ internal static class Program
             .Id(s => s.Key);
 
         #endregion
-
+        
         #region Lavalink Config
 
         var lavalinkConfiguration = new LavalinkConfiguration
