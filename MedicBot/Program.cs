@@ -1,13 +1,11 @@
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.Lavalink;
-using DSharpPlus.Net;
 using LiteDB;
 using MedicBot.Commands;
 using MedicBot.Manager;
 using MedicBot.Model;
 using MedicBot.Utils;
-using Microsoft.Extensions.Logging;
 using Serilog;
 
 namespace MedicBot;
@@ -22,6 +20,7 @@ internal static class Program
     private static async Task ConfigureAsync()
     {
         // Configuration
+
         #region Logger Config
 
         Log.Logger = new LoggerConfiguration()
@@ -44,18 +43,12 @@ internal static class Program
 
         #region Lavalink Config
 
-        var lavalinkEndpoint = new ConnectionEndpoint
-        {
-            Hostname = "127.0.0.1",
-            Port = 2333
-        };
-
         var lavalinkConfiguration = new LavalinkConfiguration
         {
-            Password =
-                Constants.LavalinkPassword, // Lavalink only listens on 127.0.0.1, this is not a security concern.
-            RestEndpoint = lavalinkEndpoint,
-            SocketEndpoint = lavalinkEndpoint
+            // Lavalink only listens on 127.0.0.1, plaintext password in git is not a security concern.
+            Password = Constants.LavalinkPassword,
+            RestEndpoint = Constants.LavalinkEndpoint,
+            SocketEndpoint = Constants.LavalinkEndpoint
         };
 
         #endregion
@@ -71,15 +64,15 @@ internal static class Program
 
         #endregion
 
-        #region WebAppConfig
-        
+        #region WebApp Config
+
         var builder = WebApplication.CreateBuilder();
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
 
         var app = builder.Build();
-        
+
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
         {
@@ -92,8 +85,9 @@ internal static class Program
         app.UseAuthorization();
 
         app.MapControllers();
+
         #endregion
-        
+
         // Initializations
         AudioManager.Init(discord);
 

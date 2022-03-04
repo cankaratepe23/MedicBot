@@ -1,4 +1,6 @@
-﻿namespace MedicBot.Utils;
+﻿using DSharpPlus.Net;
+
+namespace MedicBot.Utils;
 
 public static class Constants
 {
@@ -6,6 +8,8 @@ public static class Constants
         "[{Timestamp:yyyy-MM-dd HH:mm:ss zzz}] [{Level:u3}] {Message:lj}{NewLine}{Exception}";
 
     public const string LavalinkPassword = "5aJCTF!Z2&*853#79r7!xind*u^2LWy";
+    private const string LavalinkHost = "127.0.0.1";
+    private const int LavalinkPort = 3332;
     public const string BotTokenEnvironmentVariableName = "Bot_Token_Dev";
     public const string LiteDatabasePath = @"medicbot_store.db";
 
@@ -29,6 +33,8 @@ public static class Constants
     public const string NotConnectedToVoiceMessage = "Not connected to any channel.";
 
     public const string DbCollectionInitializedBotSettings = "BotSetting collection in LiteDb initialized";
+    
+    public static readonly ConnectionEndpoint LavalinkEndpoint = new(LavalinkHost, LavalinkPort);
 
     public static readonly string[] BotPrefixes = {"*"};
 }
