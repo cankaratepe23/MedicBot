@@ -13,4 +13,11 @@ public class AudioController : ControllerBase
         await AudioManager.JoinAsync(guildId);
         return Ok();
     }
+
+    [HttpGet("Leave/{guildId}")]
+    public async Task<OkResult> Leave(ulong guildId)
+    {
+        await AudioManager.LeaveAsync(guildId);
+        return Ok();
+    }
 }
