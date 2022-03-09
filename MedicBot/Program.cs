@@ -40,7 +40,7 @@ internal static class Program
             .Id(s => s.Key);
 
         #endregion
-        
+
         #region Lavalink Config
 
         var lavalinkConfiguration = new LavalinkConfiguration
@@ -89,7 +89,12 @@ internal static class Program
         #endregion
 
         // Initializations
-        AudioManager.Init(discord);
+        // Ensure tracks folder exists
+        var audioTracksPath = Path.Combine(Environment.CurrentDirectory, Constants.AudioTracksPath);
+        if (!Directory.Exists(audioTracksPath))
+            Directory.CreateDirectory(audioTracksPath);
+        AudioManager.Init(discord, audioTracksPath);
+
 
         // Commands Init
         var commands = discord.UseCommandsNext(new CommandsNextConfiguration

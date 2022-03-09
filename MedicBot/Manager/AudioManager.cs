@@ -2,6 +2,8 @@
 using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
 using DSharpPlus.Lavalink;
+using MedicBot.Model;
+using MedicBot.Repository;
 using MedicBot.Utils;
 using Serilog;
 
@@ -10,10 +12,12 @@ namespace MedicBot.Manager;
 public static class AudioManager
 {
     private static DiscordClient Client { get; set; }
+    private static string AudioTracksFullPath { get; set; }
 
-    public static void Init(DiscordClient client)
+    public static void Init(DiscordClient client, string fullPath)
     {
         Client = client;
+        AudioTracksFullPath = fullPath;
     }
 
     // Normally called by CommandsNext
@@ -131,5 +135,25 @@ public static class AudioManager
 
         await connection.DisconnectAsync();
         Log.Information("Voice disconnected from {Channel}", connection.Channel);
+    }
+
+    public static async Task AddAsync(string audioName, ulong userId, string url)
+    {
+        var fileExtension = url[url.LastIndexOf('.')..];
+        var fileName = audioName + fileExtension;
+        var filePath = Path.Combine(AudioTracksFullPath, fileName);
+        {
+            using var client = new HttpClient();
+            await using var stream = await client.GetStreamAsync(url);
+            await using var fileStream = File.OpenWrite(filePath);
+            await stream.CopyToAsync(fileStream);
+            await fileStream.FlushAsync();
+        }
+        AudioRepository.Add(new AudioTrack
+        {
+            Name = audioName,
+            Path = filePath,
+            OwnerId = userId
+        });
     }
 }
