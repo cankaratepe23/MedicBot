@@ -12,7 +12,7 @@
     "MedicBot": {
       "commandName": "Project",
       "dotnetRunMessages": true,
-      "launchBrowser": true,
+      "launchBrowser": false,
       "launchUrl": "swagger",
       "applicationUrl": "https://localhost:3333;http://localhost:3334",
       "environmentVariables": {
