@@ -1,4 +1,5 @@
-﻿using MedicBot.Manager;
+﻿using MedicBot.Exceptions;
+using MedicBot.Manager;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MedicBot.Controller;
@@ -46,6 +47,20 @@ public class AudioController : ControllerBase
         catch (Exception e)
         {
             return BadRequest(e.Message);
+        }
+        return Ok();
+    }
+
+    [HttpGet("Play/{guildId}")]
+    public async Task<ActionResult> Play(ulong guildId, [FromQuery]string audioNameOrId, [FromQuery]bool searchById = false)
+    {
+        try
+        {
+            await AudioManager.PlayAsync(audioNameOrId, guildId);
+        }
+        catch (AudioTrackNotFoundException e)
+        {
+            return NotFound(e.Message);
         }
         return Ok();
     }
