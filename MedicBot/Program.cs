@@ -12,6 +12,9 @@ namespace MedicBot;
 
 internal static class Program
 {
+    private static readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+    private static DiscordClient? _client;
+    
     private static void Main(string[] args)
     {
         ConfigureAsync().GetAwaiter().GetResult();
@@ -60,6 +63,7 @@ internal static class Program
             Token = Environment.GetEnvironmentVariable(Constants.BotTokenEnvironmentVariableName),
             LoggerFactory = logFactory
         });
+        _client = discord;
         var lavalink = discord.UseLavalink();
 
         #endregion
@@ -105,10 +109,36 @@ internal static class Program
         commands.RegisterCommands<AudioCommands>();
         commands.RegisterCommands<SettingsCommands>();
 
+        // Register events
+        app.Lifetime.ApplicationStopping.Register(async () =>
+        {
+            await Cleanup();
+            Environment.Exit(0);
+        });
+        
         // Startup
         await app.StartAsync();
         await discord.ConnectAsync();
         await lavalink.ConnectAsync(lavalinkConfiguration);
-        await Task.Delay(-1);
+        try
+        {
+            await Task.Delay(-1, _cancellationTokenSource.Token);
+        }
+        catch (TaskCanceledException tce)
+        { }
+    }
+
+    public static async Task Cleanup()
+    {
+        if (_client == null)
+        {
+            return;
+        }
+
+        await _client.GetLavalink().GetNodeConnection(Constants.LavalinkEndpoint).StopAsync();
+        await _client.DisconnectAsync();
+        _client.Dispose();
+        _client = null;
+        _cancellationTokenSource.Cancel();
     }
 }
