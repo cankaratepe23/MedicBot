@@ -32,8 +32,7 @@ public class BaseCommands : BaseCommandModule
     [Command("shutdown")]
     public async Task ShutdownBotCommand(CommandContext ctx)
     {
-        await ctx.Client.GetLavalink().GetNodeConnection(Constants.LavalinkEndpoint).StopAsync();
-        await ctx.Client.DisconnectAsync();
+        await Program.Cleanup();
         Environment.Exit(0);
     }
 }
