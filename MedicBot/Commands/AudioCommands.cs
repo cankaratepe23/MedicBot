@@ -1,9 +1,10 @@
 ﻿using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
+using MedicBot.Exceptions;
 using MedicBot.Manager;
-using MedicBot.Repository;
 using MedicBot.Utils;
+using Serilog;
 
 namespace MedicBot.Commands;
 
@@ -21,6 +22,7 @@ public class AudioCommands : BaseCommandModule
             await ctx.RespondAsync(e.Message);
             return;
         }
+
         await ctx.Message.RespondThumbsUpAsync();
     }
 
@@ -36,6 +38,7 @@ public class AudioCommands : BaseCommandModule
             await ctx.RespondAsync(e.Message);
             return;
         }
+
         await ctx.Message.RespondThumbsUpAsync();
     }
 
@@ -44,11 +47,18 @@ public class AudioCommands : BaseCommandModule
     public async Task AddCommand(CommandContext ctx, [RemainingText] string audioName)
     {
         if (!audioName.IsValidFileName())
-            // TODO Improve message add logging.
-            throw new ArgumentException("File name has invalid characters.");
+        {
+            Log.Warning("{Filename} has invalid characters", audioName);
+            await ctx.RespondAsync($"Filename: {audioName} has invalid characters.");
+            return;
+        }
+
         if (ctx.Message.Attachments.Count == 0)
-            // TODO Improve message add logging.
-            throw new ArgumentException("This overload requires an attachment.");
+        {
+            Log.Warning("No attachments found in {Message}", ctx.Message);
+            await ctx.RespondAsync("This command requires an attachment.");
+            return;
+        }
 
         var attachmentUrl = ctx.Message.Attachments[0].Url;
         await AudioManager.AddAsync(audioName, ctx.Member.Id, attachmentUrl);
@@ -57,6 +67,13 @@ public class AudioCommands : BaseCommandModule
     [Command("play")]
     public async Task PlayCommand(CommandContext ctx, [RemainingText] string audioName)
     {
-        await AudioManager.PlayAsync(AudioRepository.FindById(audioName), ctx.Guild.Id);
+        try
+        {
+            await AudioManager.PlayAsync(audioName, ctx.Guild);
+        }
+        catch (AudioTrackNotFoundException e)
+        {
+            await ctx.RespondAsync(e.Message);
+        }
     }
 }

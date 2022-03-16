@@ -1,6 +1,7 @@
 ﻿using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.Lavalink;
+using MedicBot.Exceptions;
 using MedicBot.Model;
 using MedicBot.Repository;
 using MedicBot.Utils;
@@ -26,8 +27,7 @@ public static class AudioManager
         if (!lava.ConnectedNodes.Any())
         {
             Log.Warning(Constants.JoinAsyncLavalinkNotConnectedLog);
-            throw new Exception(Constants.JoinAsyncLavalinkNotConnectedLog);
-            // TODO Throw a custom exception type to specify which exceptions the user should know about.
+            throw new LavalinkNotConnectedException(Constants.JoinAsyncLavalinkNotConnectedLog);
         }
 
         if (channel.Type != ChannelType.Voice)
@@ -39,7 +39,7 @@ public static class AudioManager
             if (alternateChannel == null)
             {
                 Log.Warning("Not a voice channel: {Channel}", channel);
-                throw new Exception($"Not a voice channel: {channel}");
+                throw new InvalidOperationException($"Not a voice channel: {channel}");
             }
 
             channel = alternateChannel;
@@ -56,13 +56,13 @@ public static class AudioManager
         if (guild == null)
         {
             Log.Warning("Guild containing a channel with ID: {Id} not found", channelId);
-            throw new Exception($"Guild containing a channel with ID: {channelId} not found.");
+            throw new GuildNotFoundException($"Guild containing a channel with ID: {channelId} not found.");
         }
 
         var channel = guild.Channels[channelId];
         await JoinAsync(channel);
     }
-    
+
     // Join the voice channel with the largest number of connected non-bot users.
     // TODO Maybe separate this into two methods, one for finding the guild and one for joining the most crowded channel.
     public static async Task JoinGuildIdAsync(ulong guildId)
@@ -76,14 +76,13 @@ public static class AudioManager
             .FirstOrDefault();
         if (mostCrowdedVoiceChannel == null)
         {
-            Log.Warning("JoinAsync() couldn't find the most crowded channel in {Guild}", guild);
-            throw new Exception($"JoinAsync() couldn't find the most crowded channel in {guild}");
+            Log.Warning("JoinGuildIdAsync() couldn't find the most crowded channel in {Guild}", guild);
+            throw new ChannelNotFoundException($"Couldn't find the most crowded channel in {guild}");
         }
 
         await JoinAsync(mostCrowdedVoiceChannel);
     }
 
-    // Called by CommandsNext
     public static async Task LeaveAsync(DiscordGuild guild)
     {
         var lava = Client.GetLavalink();
@@ -105,7 +104,7 @@ public static class AudioManager
     }
 
     public static async Task LeaveAsync(ulong guildId)
-    { 
+    {
         await LeaveAsync(FindGuild(guildId));
     }
 
@@ -129,15 +128,9 @@ public static class AudioManager
         });
     }
 
-    public static async Task PlayAsync(AudioTrack audioTrack, ulong guildId)
+    public static async Task PlayAsync(AudioTrack audioTrack, DiscordGuild guild)
     {
         var lava = Client.GetLavalink();
-        var guildExists = Client.Guilds.TryGetValue(guildId, out var guild);
-        if (!guildExists)
-        {
-            Log.Warning("Guild with ID: {Id} not found", guildId);
-            return;
-        }
 
         var connection = lava.GetGuildConnection(guild);
         if (connection == null)
@@ -149,14 +142,40 @@ public static class AudioManager
         var audioFile = new FileInfo(audioTrack.Path);
         var result = await connection.GetTracksAsync(audioFile);
         if (result.LoadResultType == LavalinkLoadResultType.TrackLoaded)
-        {
             await connection.PlayAsync(result.Tracks.FirstOrDefault());
-        }
     }
-    
+
+
+    public static async Task PlayAsync(string audioName, DiscordGuild guild, bool searchById = false)
+    {
+        var audioTrack = searchById
+            ? AudioRepository.FindById(audioName)
+            : throw new NotImplementedException("Search by name and tags not implemented yet.");
+        if (audioTrack == null)
+        {
+            Log.Warning("No track was found with {IdOrName}: {Id}", searchById ? "ID" : "name", audioName);
+            throw new AudioTrackNotFoundException(
+                $"No track was found with {(searchById ? "ID" : "name")}: {audioName}");
+        }
+
+        await PlayAsync(audioTrack, guild);
+    }
+
+    public static async Task PlayAsync(AudioTrack audioTrack, ulong guildId)
+    {
+        var guild = FindGuild(guildId);
+        await PlayAsync(audioTrack, guild);
+    }
+
+    public static async Task PlayAsync(string audioNameOrId, ulong guildId, bool searchById = false)
+    {
+        var guild = FindGuild(guildId);
+        await PlayAsync(audioNameOrId, guild, searchById);
+    }
+
     /// <summary>
-    /// Finds a guild with the given guildId. Wraps Client.Guilds.TryGetValue() with logging and exception
-    /// that will be thrown if the guild cannot be found.
+    ///     Finds a guild with the given guildId. Wraps Client.Guilds.TryGetValue() with logging and exception
+    ///     that will be thrown if the guild cannot be found.
     /// </summary>
     /// <param name="guildId">The guild ID to search for.</param>
     /// <returns>The Guild object with the given ID.</returns>

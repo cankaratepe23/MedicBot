@@ -20,6 +20,7 @@ public class AudioController : ControllerBase
         {
             return BadRequest(e.Message);
         }
+
         return Ok();
     }
 
@@ -34,6 +35,7 @@ public class AudioController : ControllerBase
         {
             return BadRequest(e.Message);
         }
+
         return Ok();
     }
 
@@ -48,11 +50,13 @@ public class AudioController : ControllerBase
         {
             return BadRequest(e.Message);
         }
+
         return Ok();
     }
 
     [HttpGet("Play/{guildId}")]
-    public async Task<ActionResult> Play(ulong guildId, [FromQuery]string audioNameOrId, [FromQuery]bool searchById = false)
+    public async Task<ActionResult> Play(ulong guildId, [FromQuery] string audioNameOrId,
+        [FromQuery] bool searchById = false)
     {
         try
         {
@@ -62,6 +66,7 @@ public class AudioController : ControllerBase
         {
             return NotFound(e.Message);
         }
+
         return Ok();
     }
 }

@@ -12,9 +12,9 @@ namespace MedicBot;
 
 internal static class Program
 {
-    private static readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+    private static readonly CancellationTokenSource _cancellationTokenSource = new();
     private static DiscordClient? _client;
-    
+
     private static void Main(string[] args)
     {
         ConfigureAsync().GetAwaiter().GetResult();
@@ -115,7 +115,7 @@ internal static class Program
             await Cleanup();
             Environment.Exit(0);
         });
-        
+
         // Startup
         await app.StartAsync();
         await discord.ConnectAsync();
@@ -125,15 +125,13 @@ internal static class Program
             await Task.Delay(-1, _cancellationTokenSource.Token);
         }
         catch (TaskCanceledException tce)
-        { }
+        {
+        }
     }
 
     public static async Task Cleanup()
     {
-        if (_client == null)
-        {
-            return;
-        }
+        if (_client == null) return;
 
         await _client.GetLavalink().GetNodeConnection(Constants.LavalinkEndpoint).StopAsync();
         await _client.DisconnectAsync();
