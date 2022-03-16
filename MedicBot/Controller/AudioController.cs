@@ -60,7 +60,7 @@ public class AudioController : ControllerBase
     {
         try
         {
-            await AudioManager.PlayAsync(audioNameOrId, guildId);
+            await AudioManager.PlayAsync(audioNameOrId, guildId, searchById);
         }
         catch (AudioTrackNotFoundException e)
         {
