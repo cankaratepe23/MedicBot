@@ -87,6 +87,9 @@ public static class AudioManager
     }
 
     // Called by CommandsNext
+    // TODO Maybe we can avoid passing ctx here as a parameter and pass guild id instead
+    // TODO that way we might be able to reduce the number of methods to just one
+    // TODO Responding to the user would be done at Commands level
     public static async Task LeaveAsync(CommandContext ctx)
     {
         var lava = ctx.Client.GetLavalink();
@@ -97,6 +100,7 @@ public static class AudioManager
             return;
         }
 
+        // TODO Somehow centralize the method and error logging to reusable methods here.
         var connection = lava.GetGuildConnection(ctx.Guild);
         if (connection == null)
         {
@@ -156,6 +160,29 @@ public static class AudioManager
             OwnerId = userId
         });
     }
-    
-    // TODO Implement and test audio playback.
+
+    public static async Task PlayAsync(AudioTrack audioTrack, ulong guildId)
+    {
+        var lava = Client.GetLavalink();
+        var guildExists = Client.Guilds.TryGetValue(guildId, out var guild);
+        if (!guildExists)
+        {
+            Log.Warning("Guild with ID: {Id} not found", guildId);
+            return;
+        }
+
+        var connection = lava.GetGuildConnection(guild);
+        if (connection == null)
+        {
+            Log.Warning(Constants.NotConnectedToVoiceLog);
+            return;
+        }
+
+        var audioFile = new FileInfo(audioTrack.Path);
+        var result = await connection.GetTracksAsync(audioFile);
+        if (result.LoadResultType == LavalinkLoadResultType.TrackLoaded)
+        {
+            await connection.PlayAsync(result.Tracks.FirstOrDefault());
+        }
+    }
 }

@@ -1,7 +1,8 @@
-using DSharpPlus.CommandsNext;
+﻿using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
 using MedicBot.Manager;
+using MedicBot.Repository;
 using MedicBot.Utils;
 
 namespace MedicBot.Commands;
@@ -33,5 +34,11 @@ public class AudioCommands : BaseCommandModule
 
         var attachmentUrl = ctx.Message.Attachments[0].Url;
         await AudioManager.AddAsync(audioName, ctx.Member.Id, attachmentUrl);
+    }
+
+    [Command("play")]
+    public async Task PlayCommand(CommandContext ctx, [RemainingText] string audioName)
+    {
+        await AudioManager.PlayAsync(AudioRepository.FindById(audioName), ctx.Guild.Id);
     }
 }
