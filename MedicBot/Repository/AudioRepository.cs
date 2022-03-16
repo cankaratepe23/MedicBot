@@ -15,10 +15,10 @@ public class AudioRepository
         Log.Information(Constants.DbCollectionInitializedBotSettings);
     }
 
-    public static AudioTrack? FindById(ulong id)
+    public static AudioTrack? FindById(string id)
     {
         using var db = new LiteDatabase(Constants.LiteDatabasePath);
-        return db.GetCollection<AudioTrack>().FindById(id);
+        return db.GetCollection<AudioTrack>().FindById(new ObjectId(id));
     }
 
     public static List<AudioTrack> FindAllWithTag(string tag)
