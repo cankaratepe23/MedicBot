@@ -1,5 +1,4 @@
 ﻿using DSharpPlus;
-using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
 using DSharpPlus.Lavalink;
 using MedicBot.Model;
@@ -11,8 +10,8 @@ namespace MedicBot.Manager;
 
 public static class AudioManager
 {
-    private static DiscordClient Client { get; set; }
-    private static string AudioTracksFullPath { get; set; }
+    private static DiscordClient Client { get; set; } = null!;
+    private static string AudioTracksFullPath { get; set; } = null!;
 
     public static void Init(DiscordClient client, string fullPath)
     {
@@ -20,28 +19,27 @@ public static class AudioManager
         AudioTracksFullPath = fullPath;
     }
 
-    // Normally called by CommandsNext
-    public static async Task JoinAsync(CommandContext ctx, DiscordChannel channel)
+    // TODO Add summary docs for everything
+    public static async Task JoinAsync(DiscordChannel channel)
     {
-        var lava = ctx.Client.GetLavalink();
+        var lava = Client.GetLavalink();
         if (!lava.ConnectedNodes.Any())
         {
             Log.Warning(Constants.JoinAsyncLavalinkNotConnectedLog);
-            await ctx.RespondAsync(Constants.JoinAsyncLavalinkNotConnectedMessage);
-            return;
+            throw new Exception(Constants.JoinAsyncLavalinkNotConnectedLog);
+            // TODO Throw a custom exception type to specify which exceptions the user should know about.
         }
 
         if (channel.Type != ChannelType.Voice)
         {
             // Handle cases where one text and one voice channel may exist with the same name.
-            var alternateChannel = ctx.Guild.Channels.Values.FirstOrDefault(c =>
+            var alternateChannel = channel.Guild.Channels.Values.FirstOrDefault(c =>
                 string.Equals(c.Name, channel.Name, StringComparison.CurrentCultureIgnoreCase) &&
                 c.Type == ChannelType.Voice);
             if (alternateChannel == null)
             {
                 Log.Warning("Not a voice channel: {Channel}", channel);
-                await ctx.RespondAsync(Constants.NotVoiceChannel);
-                return;
+                throw new Exception($"Not a voice channel: {channel}");
             }
 
             channel = alternateChannel;
@@ -50,95 +48,65 @@ public static class AudioManager
         var node = lava.GetIdealNodeConnection();
         await node.ConnectAsync(channel);
         Log.Information("Voice connected to {Channel}", channel);
-        await ctx.Message.RespondThumbsUpAsync();
     }
 
-    // Join the voice channel with the largest number of connected non-bot users.
-    // May be called from external sources, such as a REST API.
-    public static async Task JoinAsync(ulong guildId)
+    public static async Task JoinChannelIdAsync(ulong channelId)
     {
-        var lava = Client.GetLavalink();
-        if (!lava.ConnectedNodes.Any())
+        var guild = Client.Guilds.Values.FirstOrDefault(g => g.Channels.ContainsKey(channelId));
+        if (guild == null)
         {
-            Log.Warning(Constants.JoinAsyncLavalinkNotConnectedLog);
-            return;
+            Log.Warning("Guild containing a channel with ID: {Id} not found", channelId);
+            throw new Exception($"Guild containing a channel with ID: {channelId} not found.");
         }
 
-        var guildExists = Client.Guilds.TryGetValue(guildId, out var guild);
-        if (!guildExists)
-        {
-            Log.Warning("Guild with ID: {Id} not found", guildId);
-            return;
-        }
+        var channel = guild.Channels[channelId];
+        await JoinAsync(channel);
+    }
+    
+    // Join the voice channel with the largest number of connected non-bot users.
+    // TODO Maybe separate this into two methods, one for finding the guild and one for joining the most crowded channel.
+    public static async Task JoinGuildIdAsync(ulong guildId)
+    {
+        var guild = FindGuild(guildId);
 
-        var mostCrowdedVoiceChannel = guild!.Channels.Values
+        // TODO Add option to choose a default channel for a guild and join that if no user is in any voice channel.
+        var mostCrowdedVoiceChannel = guild.Channels.Values
             .Where(c => c.Type == ChannelType.Voice)
             .OrderByDescending(c => c.Users.Count(u => !u.IsBot))
             .FirstOrDefault();
         if (mostCrowdedVoiceChannel == null)
         {
             Log.Warning("JoinAsync() couldn't find the most crowded channel in {Guild}", guild);
-            return;
+            throw new Exception($"JoinAsync() couldn't find the most crowded channel in {guild}");
         }
 
-        var node = lava.GetIdealNodeConnection();
-        await node.ConnectAsync(mostCrowdedVoiceChannel);
-        Log.Information("Voice connected to {Channel}", mostCrowdedVoiceChannel);
+        await JoinAsync(mostCrowdedVoiceChannel);
     }
 
     // Called by CommandsNext
-    // TODO Maybe we can avoid passing ctx here as a parameter and pass guild id instead
-    // TODO that way we might be able to reduce the number of methods to just one
-    // TODO Responding to the user would be done at Commands level
-    public static async Task LeaveAsync(CommandContext ctx)
-    {
-        var lava = ctx.Client.GetLavalink();
-        if (!lava.ConnectedNodes.Any())
-        {
-            Log.Warning(Constants.LeaveAsyncLavalinkNotConnectedLog);
-            await ctx.RespondAsync(Constants.LeaveAsyncLavalinkNotConnectedMessage);
-            return;
-        }
-
-        // TODO Somehow centralize the method and error logging to reusable methods here.
-        var connection = lava.GetGuildConnection(ctx.Guild);
-        if (connection == null)
-        {
-            Log.Warning(Constants.NotConnectedToVoiceLog);
-            await ctx.RespondAsync(Constants.NotConnectedToVoiceMessage);
-            return;
-        }
-
-        await connection.DisconnectAsync();
-        Log.Information("Voice disconnected from {Channel}", connection.Channel);
-        await ctx.Message.RespondThumbsUpAsync();
-    }
-
-    public static async Task LeaveAsync(ulong guildId)
+    public static async Task LeaveAsync(DiscordGuild guild)
     {
         var lava = Client.GetLavalink();
         if (!lava.ConnectedNodes.Any())
         {
             Log.Warning(Constants.LeaveAsyncLavalinkNotConnectedLog);
-            return;
-        }
-
-        var guildExists = Client.Guilds.TryGetValue(guildId, out var guild);
-        if (!guildExists)
-        {
-            Log.Warning("Guild with ID: {Id} not found", guildId);
-            return;
+            throw new Exception(Constants.LeaveAsyncLavalinkNotConnectedMessage);
         }
 
         var connection = lava.GetGuildConnection(guild);
         if (connection == null)
         {
             Log.Warning(Constants.NotConnectedToVoiceLog);
-            return;
+            throw new Exception(Constants.NotConnectedToVoiceMessage);
         }
 
         await connection.DisconnectAsync();
         Log.Information("Voice disconnected from {Channel}", connection.Channel);
+    }
+
+    public static async Task LeaveAsync(ulong guildId)
+    { 
+        await LeaveAsync(FindGuild(guildId));
     }
 
     public static async Task AddAsync(string audioName, ulong userId, string url)
@@ -184,5 +152,20 @@ public static class AudioManager
         {
             await connection.PlayAsync(result.Tracks.FirstOrDefault());
         }
+    }
+    
+    /// <summary>
+    /// Finds a guild with the given guildId. Wraps Client.Guilds.TryGetValue() with logging and exception
+    /// that will be thrown if the guild cannot be found.
+    /// </summary>
+    /// <param name="guildId">The guild ID to search for.</param>
+    /// <returns>The Guild object with the given ID.</returns>
+    /// <exception cref="Exception">Exception with user-friendly message stating the guild cannot be found.</exception>
+    private static DiscordGuild FindGuild(ulong guildId)
+    {
+        var guildExists = Client.Guilds.TryGetValue(guildId, out var guild);
+        if (guildExists && guild != null) return guild;
+        Log.Warning("Guild with ID: {Id} not found", guildId);
+        throw new Exception($"Guild with ID: {guildId} not found");
     }
 }

@@ -12,13 +12,31 @@ public class AudioCommands : BaseCommandModule
     [Command("join")]
     public async Task JoinCommand(CommandContext ctx, DiscordChannel channel)
     {
-        await AudioManager.JoinAsync(ctx, channel);
+        try
+        {
+            await AudioManager.JoinAsync(channel);
+        }
+        catch (Exception e)
+        {
+            await ctx.RespondAsync(e.Message);
+            return;
+        }
+        await ctx.Message.RespondThumbsUpAsync();
     }
 
     [Command("leave")]
     public async Task LeaveCommand(CommandContext ctx)
     {
-        await AudioManager.LeaveAsync(ctx);
+        try
+        {
+            await AudioManager.LeaveAsync(ctx.Guild);
+        }
+        catch (Exception e)
+        {
+            await ctx.RespondAsync(e.Message);
+            return;
+        }
+        await ctx.Message.RespondThumbsUpAsync();
     }
 
     // TODO: Overloads for the add comment: Attachment, youtube link maybe?, id of message with attachment 

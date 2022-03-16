@@ -1,9 +1,6 @@
 ﻿using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
-using DSharpPlus.Lavalink;
-using MedicBot.Manager;
 using MedicBot.Repository;
-using MedicBot.Utils;
 using Serilog;
 
 namespace MedicBot.Commands;
@@ -24,9 +21,6 @@ public class BaseCommands : BaseCommandModule
             : $"Found setting value: {botSetting}";
 
         await ctx.RespondAsync(message);
-
-
-        await AudioManager.JoinAsync(463052720509812736);
     }
 
     [Command("shutdown")]

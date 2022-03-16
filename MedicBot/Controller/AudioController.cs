@@ -7,17 +7,46 @@ namespace MedicBot.Controller;
 [Route("[controller]")]
 public class AudioController : ControllerBase
 {
-    [HttpGet("Join/{guildId}")]
-    public async Task<OkResult> Join(ulong guildId)
+    [HttpGet("JoinGuild/{guildId}")]
+    public async Task<ActionResult> JoinGuild(ulong guildId)
     {
-        await AudioManager.JoinAsync(guildId);
+        try
+        {
+            await AudioManager.JoinGuildIdAsync(guildId);
+        }
+        /* TODO Maybe send different error codes for different types of exceptions like lavalink exception, guild not found exception etc. */
+        catch (Exception e)
+        {
+            return BadRequest(e.Message);
+        }
+        return Ok();
+    }
+
+    [HttpGet("JoinChannel/{channelId}")]
+    public async Task<ActionResult> JoinChannel(ulong channelId)
+    {
+        try
+        {
+            await AudioManager.JoinChannelIdAsync(channelId);
+        }
+        catch (Exception e)
+        {
+            return BadRequest(e.Message);
+        }
         return Ok();
     }
 
     [HttpGet("Leave/{guildId}")]
-    public async Task<OkResult> Leave(ulong guildId)
+    public async Task<ActionResult> Leave(ulong guildId)
     {
-        await AudioManager.LeaveAsync(guildId);
+        try
+        {
+            await AudioManager.LeaveAsync(guildId);
+        }
+        catch (Exception e)
+        {
+            return BadRequest(e.Message);
+        }
         return Ok();
     }
 }
