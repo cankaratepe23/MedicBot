@@ -1,4 +1,4 @@
-﻿using DSharpPlus.CommandsNext;
+using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
 using MedicBot.Manager;
@@ -24,7 +24,7 @@ public class AudioCommands : BaseCommandModule
     [Command("add")]
     public async Task AddCommand(CommandContext ctx, [RemainingText] string audioName)
     {
-        if (audioName.IsValidFileName())
+        if (!audioName.IsValidFileName())
             // TODO Improve message add logging.
             throw new ArgumentException("File name has invalid characters.");
         if (ctx.Message.Attachments.Count == 0)
