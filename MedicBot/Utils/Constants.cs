@@ -21,16 +21,12 @@ public static class Constants
     public const string JoinAsyncLavalinkNotConnectedLog =
         "JoinAsync() called before a Lavalink connection established";
 
-    public const string JoinAsyncLavalinkNotConnectedMessage =
-        "JoinAsync() called before a Lavalink connection established";
-
     public const string LeaveAsyncLavalinkNotConnectedLog =
         "LeaveAsync() called before a Lavalink connection established";
 
     public const string LeaveAsyncLavalinkNotConnectedMessage =
         "LeaveAsync() called before a Lavalink connection established";
 
-    public const string NotVoiceChannel = "Not a voice channel.";
     public const string NotConnectedToVoiceLog = "LeaveAsync() called when bot not in a voice channel";
     public const string NotConnectedToVoiceMessage = "Not connected to any channel.";
 
