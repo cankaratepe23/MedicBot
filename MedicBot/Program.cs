@@ -12,7 +12,7 @@ namespace MedicBot;
 
 internal static class Program
 {
-    private static readonly CancellationTokenSource _cancellationTokenSource = new();
+    private static readonly CancellationTokenSource CancellationTokenSource = new();
     private static DiscordClient? _client;
 
     private static void Main(string[] args)
@@ -122,9 +122,9 @@ internal static class Program
         await lavalink.ConnectAsync(lavalinkConfiguration);
         try
         {
-            await Task.Delay(-1, _cancellationTokenSource.Token);
+            await Task.Delay(-1, CancellationTokenSource.Token);
         }
-        catch (TaskCanceledException tce)
+        catch (TaskCanceledException)
         {
         }
     }
@@ -137,6 +137,6 @@ internal static class Program
         await _client.DisconnectAsync();
         _client.Dispose();
         _client = null;
-        _cancellationTokenSource.Cancel();
+        CancellationTokenSource.Cancel();
     }
 }
