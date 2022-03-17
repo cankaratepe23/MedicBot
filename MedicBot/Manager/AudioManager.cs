@@ -120,12 +120,7 @@ public static class AudioManager
             await stream.CopyToAsync(fileStream);
             await fileStream.FlushAsync();
         }
-        AudioRepository.Add(new AudioTrack
-        {
-            Name = audioName,
-            Path = filePath,
-            OwnerId = userId
-        });
+        AudioRepository.Add(new AudioTrack(audioName, filePath, userId));
     }
 
     public static async Task PlayAsync(AudioTrack audioTrack, DiscordGuild guild)
