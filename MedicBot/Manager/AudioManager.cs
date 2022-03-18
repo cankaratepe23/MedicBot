@@ -145,7 +145,7 @@ public static class AudioManager
     {
         var audioTrack = searchById
             ? AudioRepository.FindById(audioName)
-            : throw new NotImplementedException("Search by name and tags not implemented yet.");
+            : AudioRepository.FindByName(audioName);
         if (audioTrack == null)
         {
             Log.Warning("No track was found with {IdOrName}: {Id}", searchById ? "ID" : "name", audioName);

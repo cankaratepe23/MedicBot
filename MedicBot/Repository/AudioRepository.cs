@@ -1,4 +1,6 @@
-﻿using LiteDB;
+﻿using System.Diagnostics;
+using Fastenshtein;
+using LiteDB;
 using MedicBot.Model;
 using MedicBot.Utils;
 using Serilog;
@@ -21,6 +23,52 @@ public class AudioRepository
         return db.GetCollection<AudioTrack>().FindById(new ObjectId(id));
     }
 
+    public static AudioTrack? FindByName(string searchTerm)
+    {
+        // TODO: Alternatives for fuzzy name search to consider:
+        // Get only the names from the DB
+        // Store DB entries in a static dictionary as cache
+        // Multi-threaded distance computation for all tracks, store results sorted by distance and get top entry
+        // Build a cache for past queries and their matches
+        // Lucene n-gram or fuzzy search (Has character limitations)
+        // Elastic???
+        using var db = new LiteDatabase(Constants.LiteDatabasePath);
+        var lev = new Levenshtein(searchTerm);
+        var minDistance = Int32.MaxValue;
+        AudioTrack? closestMatch = null;
+        var allTracks = All();
+        var watch = Stopwatch.StartNew();
+        foreach (var item in allTracks)
+        {
+            var distance = lev.DistanceFrom(item.Name);
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                closestMatch = item;
+            }
+        }
+
+        watch.Stop();
+        var elapsed = watch.ElapsedMilliseconds;
+        return closestMatch;
+    }
+
+    public static IEnumerable<AudioTrack> All()
+    {
+        /*
+        using var db = new LiteDatabase(Constants.LiteDatabasePath);
+        return db.GetCollection<AudioTrack>().FindAll();
+        */
+        List<AudioTrack> list = new();
+        Random rnd = new Random();
+        for (int i = 0; i < 1500; i++)
+        {
+            list.Add(new AudioTrack(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), (ulong)rnd.NextInt64()));
+        }
+
+        return list;
+    }
+    
     public static List<AudioTrack> FindAllWithTag(string tag)
     {
         using var db = new LiteDatabase(Constants.LiteDatabasePath);
