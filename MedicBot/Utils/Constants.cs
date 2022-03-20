@@ -13,7 +13,7 @@ public static class Constants
     private const string LavalinkHost = "127.0.0.1";
     private const int LavalinkPort = 3332;
     public const string BotTokenEnvironmentVariableName = "Bot_Token_Dev";
-    public const string LiteDatabasePath = @"medicbot_store.db";
+    public const string LiteDatabasePath = @"Filename=medicbot_store.db;connection=shared";
 
     public const string ThumbsUpUnicode = "👍";
 
