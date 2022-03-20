@@ -4,6 +4,10 @@ namespace MedicBot.Model;
 
 public class AudioTrack
 {
+    public AudioTrack()
+    {
+    }
+
     public AudioTrack(string name, string path, ulong ownerId) : this(name, new List<string>(), new List<string>(),
         path, ownerId)
     {
