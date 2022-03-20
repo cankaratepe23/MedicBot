@@ -110,6 +110,8 @@ public static class AudioManager
 
     public static async Task AddAsync(string audioName, ulong userId, string url)
     {
+        // TODO Add error checking for files with no extension
+        // TODO Add duplicate audio name checking
         var fileExtension = url[url.LastIndexOf('.')..];
         var fileName = audioName + fileExtension;
         var filePath = Path.Combine(AudioTracksFullPath, fileName);
@@ -131,6 +133,7 @@ public static class AudioManager
         if (connection == null)
         {
             Log.Warning(Constants.NotConnectedToVoiceLog);
+            // TODO throw new exception;;
             return;
         }
 
