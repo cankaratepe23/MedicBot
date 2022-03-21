@@ -4,7 +4,9 @@ namespace MedicBot.Model;
 
 public class AudioTrack
 {
+#pragma warning disable CS8618
     public AudioTrack()
+#pragma warning restore CS8618
     {
     }
 

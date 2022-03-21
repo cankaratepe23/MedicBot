@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using Fastenshtein;
+﻿using Fastenshtein;
 using LiteDB;
 using MedicBot.Model;
 using MedicBot.Utils;
@@ -52,7 +51,6 @@ public class AudioRepository
         var minDistance = int.MaxValue;
         AudioTrack? closestMatch = null;
         var allTracks = All();
-        var watch = Stopwatch.StartNew();
         foreach (var item in allTracks)
         {
             var distance = lev.DistanceFrom(item.Name);
@@ -63,8 +61,6 @@ public class AudioRepository
             }
         }
 
-        watch.Stop();
-        var elapsed = watch.ElapsedMilliseconds;
         return closestMatch;
     }
 
