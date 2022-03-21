@@ -1,4 +1,4 @@
-﻿using DSharpPlus;
+using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.Lavalink;
 using MedicBot.Exceptions;
@@ -63,11 +63,13 @@ public static class AudioManager
         await JoinAsync(channel);
     }
 
-    // Join the voice channel with the largest number of connected non-bot users.
     public static async Task JoinGuildIdAsync(ulong guildId)
     {
-        var guild = FindGuild(guildId);
+        await JoinGuildAsync(FindGuild(guildId));
+    }
 
+    public static async Task JoinGuildAsync(DiscordGuild guild)
+    {
         // TODO Add option to choose a default channel for a guild and join that if no user is in any voice channel.
         var mostCrowdedVoiceChannel = guild.Channels.VoiceChannelWithMostNonBotUsers();
         if (mostCrowdedVoiceChannel == null)

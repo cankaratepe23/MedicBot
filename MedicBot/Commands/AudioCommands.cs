@@ -1,4 +1,4 @@
-﻿using DSharpPlus.CommandsNext;
+using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
 using MedicBot.Exceptions;
@@ -24,6 +24,19 @@ public class AudioCommands : BaseCommandModule
         }
 
         await ctx.Message.RespondThumbsUpAsync();
+    }
+
+    [Command("join")]
+    public async Task JoinCommand(CommandContext ctx)
+    {
+        try
+        {
+            await AudioManager.JoinGuildAsync(ctx.Guild);
+        }
+        catch (Exception e)
+        {
+            await ctx.RespondAsync(e.Message);
+        }
     }
 
     [Command("leave")]
