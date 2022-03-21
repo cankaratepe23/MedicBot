@@ -1,4 +1,4 @@
-using DSharpPlus;
+﻿using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.Lavalink;
 using MedicBot.Exceptions;
@@ -106,7 +106,6 @@ public static class AudioManager
 
     public static async Task AddAsync(string audioName, ulong userId, string url)
     {
-        // TODO Add error checking for files with no extension
         // TODO Add duplicate audio name checking
         var fileExtension = url[url.LastIndexOf('.')..];
         var fileName = audioName + fileExtension;
