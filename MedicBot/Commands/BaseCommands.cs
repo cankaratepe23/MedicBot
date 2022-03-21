@@ -1,6 +1,5 @@
 ﻿using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
-using MedicBot.Repository;
 using Serilog;
 
 namespace MedicBot.Commands;
