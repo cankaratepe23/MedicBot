@@ -14,7 +14,8 @@ public class AudioRepository
     {
         // Ensure db and collection is created.
         using var db = new LiteDatabase(Constants.LiteDatabasePath);
-        db.GetCollection<AudioTrack>();
+        var collection = db.GetCollection<AudioTrack>();
+        collection.EnsureIndex(a => a.Name);
         Log.Information(Constants.DbCollectionInitializedBotSettings);
     }
 
@@ -22,6 +23,12 @@ public class AudioRepository
     {
         using var db = new LiteDatabase(Constants.LiteDatabasePath);
         return db.GetCollection<AudioTrack>().FindById(new ObjectId(id));
+    }
+
+    public static bool NameExists(string name)
+    {
+        using var db = new LiteDatabase(Constants.LiteDatabasePath);
+        return db.GetCollection<AudioTrack>().Exists(a => a.Name == name);
     }
 
     public static AudioTrack? FindByName(string searchTerm)

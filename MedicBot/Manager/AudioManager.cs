@@ -106,7 +106,11 @@ public static class AudioManager
 
     public static async Task AddAsync(string audioName, ulong userId, string url)
     {
-        // TODO Add duplicate audio name checking
+        if (AudioRepository.NameExists(audioName))
+        {
+            Log.Warning("An AudioTrack with the name {AudioName} already exists", audioName);
+            throw new AudioTrackExistsException($"An AudioTrack with the name {audioName} already exists.");
+        }
         var fileExtension = url[url.LastIndexOf('.')..];
         var fileName = audioName + fileExtension;
         var filePath = Path.Combine(AudioTracksFullPath, fileName);
@@ -127,8 +131,24 @@ public static class AudioManager
         var connection = lava.GetGuildConnection(guild);
         if (connection == null)
         {
-            Log.Warning(Constants.NotConnectedToVoiceLog);
-            throw new Exception(Constants.NotConnectedToVoiceMessage);
+            Log.Information("Play was called when bot was not in a voice channel");
+            Log.Information("Trying to join a voice channel");
+            var channelToJoin = guild.Channels.VoiceChannelWithMostNonBotUsers();
+            if (channelToJoin == null)
+            {
+                Log.Warning("JoinGuildIdAsync() couldn't find the most crowded channel in {Guild}", guild);
+                throw new ChannelNotFoundException($"Couldn't find the most crowded channel in {guild}");
+            }
+
+            await JoinAsync(channelToJoin);
+            connection = lava.GetGuildConnection(guild);
+            if (connection == null)
+            {
+                Log.Error("Bot couldn't join the most crowded channel, but no exception was thrown");
+                throw new Exception("Fatal: Bot was not in a voice channel when play was called, " +
+                                    "and it couldn't join the most crowded channel either," +
+                                    "but it threw no exceptions when it was supposed to.");
+            }
         }
 
         var audioFile = new FileInfo(audioTrack.Path);
