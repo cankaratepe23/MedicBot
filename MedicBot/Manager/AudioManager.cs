@@ -64,16 +64,12 @@ public static class AudioManager
     }
 
     // Join the voice channel with the largest number of connected non-bot users.
-    // TODO Maybe separate this into two methods, one for finding the guild and one for joining the most crowded channel.
     public static async Task JoinGuildIdAsync(ulong guildId)
     {
         var guild = FindGuild(guildId);
 
         // TODO Add option to choose a default channel for a guild and join that if no user is in any voice channel.
-        var mostCrowdedVoiceChannel = guild.Channels.Values
-            .Where(c => c.Type == ChannelType.Voice)
-            .OrderByDescending(c => c.Users.Count(u => !u.IsBot))
-            .FirstOrDefault();
+        var mostCrowdedVoiceChannel = guild.Channels.VoiceChannelWithMostNonBotUsers();
         if (mostCrowdedVoiceChannel == null)
         {
             Log.Warning("JoinGuildIdAsync() couldn't find the most crowded channel in {Guild}", guild);

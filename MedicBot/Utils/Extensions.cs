@@ -1,4 +1,5 @@
-﻿using DSharpPlus.Entities;
+﻿using DSharpPlus;
+using DSharpPlus.Entities;
 
 namespace MedicBot.Utils;
 
@@ -16,5 +17,14 @@ public static class Extensions
     public static bool IsValidFileName(this string stringToCheck)
     {
         return !stringToCheck.Any(Constants.InvalidFileNameChars.Contains);
+    }
+
+    public static DiscordChannel? VoiceChannelWithMostNonBotUsers(
+        this IReadOnlyDictionary<ulong, DiscordChannel> channels)
+    {
+        return channels.Values
+            .Where(c => c.Type == ChannelType.Voice)
+            .OrderByDescending(c => c.Users.Count(u => !u.IsBot))
+            .FirstOrDefault();
     }
 }
