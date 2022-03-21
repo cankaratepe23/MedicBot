@@ -18,7 +18,6 @@ internal static class Program
     private static void Main(string[] args)
     {
         ConfigureAsync().GetAwaiter().GetResult();
-        // TODO Check for memory leaks.
     }
 
     private static async Task ConfigureAsync()
