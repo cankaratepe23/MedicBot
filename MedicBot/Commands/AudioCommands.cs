@@ -82,6 +82,21 @@ public class AudioCommands : BaseCommandModule
         await ctx.Message.RespondThumbsUpAsync();
     }
 
+    public async Task DeleteCommand(CommandContext ctx, [RemainingText] string audioName)
+    {
+        try
+        {
+            await AudioManager.DeleteAsync(audioName, ctx.User.Id);
+        }
+        catch (Exception e)
+        {
+            await ctx.RespondAsync(e.Message);
+            return;
+        }
+
+        await ctx.Message.RespondThumbsUpAsync();
+    }
+
     [Command("play")]
     public async Task PlayCommand(CommandContext ctx, [RemainingText] string audioName)
     {

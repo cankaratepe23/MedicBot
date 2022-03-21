@@ -54,6 +54,27 @@ public static class AudioManager
         AudioRepository.Add(new AudioTrack(audioName, filePath, userId));
     }
 
+    public static async Task DeleteAsync(string audioName, ulong userId)
+    {
+        var audioTrack = AudioRepository.FindByNameExact(audioName);
+        if (audioTrack == null)
+        {
+            Log.Warning("No track was found with name: {Name}", audioName);
+            throw new AudioTrackNotFoundException($"No track was found with name: {audioName}");
+        }
+
+        if (audioTrack.OwnerId != userId && Client.CurrentUser.Id != userId)
+        {
+            Log.Warning("A non-owner or non-admin user {UserId} attempted deleting the following track: {@AudioTrack}",
+                userId, audioTrack);
+            var user = await Client.GetUserAsync(userId);
+            if (user != null) Log.Warning("Offending user of the unauthorized delete operation: {User}", user);
+            throw new UnauthorizedException("You need to be the owner of this audio track to delete it.");
+        }
+
+        AudioRepository.Delete(audioTrack.Id);
+    }
+
     /// <summary>
     ///     Finds a guild with the given guildId. Wraps Client.Guilds.TryGetValue() with logging and exception
     ///     that will be thrown if the guild cannot be found.

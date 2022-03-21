@@ -27,7 +27,16 @@ public class AudioRepository
     public static bool NameExists(string name)
     {
         using var db = new LiteDatabase(Constants.LiteDatabasePath);
-        return db.GetCollection<AudioTrack>().Exists(a => a.Name == name);
+        return db.GetCollection<AudioTrack>()
+            .Exists(a => string.Equals(a.Name, name, StringComparison.InvariantCultureIgnoreCase));
+    }
+
+    public static AudioTrack? FindByNameExact(string name)
+    {
+        using var db = new LiteDatabase(Constants.LiteDatabasePath);
+        return db.GetCollection<AudioTrack>()
+            .Find(a => string.Equals(a.Name, name, StringComparison.InvariantCultureIgnoreCase))
+            .FirstOrDefault();
     }
 
     public static AudioTrack? FindByName(string searchTerm)
@@ -94,7 +103,7 @@ public class AudioRepository
         return db.GetCollection<AudioTrack>().Update(audioTrack);
     }
 
-    public static void Delete(ulong id)
+    public static void Delete(ObjectId id)
     {
         using var db = new LiteDatabase(Constants.LiteDatabasePath);
         db.GetCollection<AudioTrack>().Delete(id);
