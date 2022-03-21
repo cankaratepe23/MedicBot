@@ -1,4 +1,4 @@
-﻿using DSharpPlus;
+using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.Lavalink;
 using MedicBot.Exceptions;
@@ -129,8 +129,7 @@ public static class AudioManager
         if (connection == null)
         {
             Log.Warning(Constants.NotConnectedToVoiceLog);
-            // TODO throw new exception;;
-            return;
+            throw new Exception(Constants.NotConnectedToVoiceMessage);
         }
 
         var audioFile = new FileInfo(audioTrack.Path);
