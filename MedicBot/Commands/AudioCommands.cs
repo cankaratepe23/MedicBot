@@ -62,6 +62,7 @@ public class AudioCommands : BaseCommandModule
             await ctx.RespondAsync("This command requires an attachment.");
             return;
         }
+
         if (ctx.Message.Attachments.Count > 1)
         {
             Log.Information("Ignoring multiple attachments sent to add command");

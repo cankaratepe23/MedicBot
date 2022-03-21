@@ -37,14 +37,14 @@ public class AudioRepository
         // Get only the names from the DB
         // Store DB entries in a static dictionary as cache
         // Multi-threaded distance computation for all tracks, store results sorted by distance and get top entry
-        
+
         // Ask the user when the match is below a certain threshold and/or is too close to another audio track.
         // These user choices can be stored in a per-user basis in LiteDB. OR: They can be added as aliases
         // Maybe we can make the user choices expire after some time
-        
+
         // Build a cache for past queries and their matches
-        
-        
+
+
         // Lucene n-gram or fuzzy search (Has character limitations)
         // Elastic???
         using var db = new LiteDatabase(Constants.LiteDatabasePath);
@@ -62,6 +62,7 @@ public class AudioRepository
                 closestMatch = item;
             }
         }
+
         watch.Stop();
         var elapsed = watch.ElapsedMilliseconds;
         return closestMatch;
@@ -72,7 +73,7 @@ public class AudioRepository
         using var db = new LiteDatabase(Constants.LiteDatabasePath);
         return db.GetCollection<AudioTrack>().FindAll();
     }
-    
+
     public static List<AudioTrack> FindAllWithTag(string tag)
     {
         using var db = new LiteDatabase(Constants.LiteDatabasePath);
