@@ -20,7 +20,59 @@ public static class AudioManager
         AudioTracksFullPath = fullPath;
     }
 
+    public static async Task AddAsync(string audioName, ulong userId, string url)
+    {
+        if (!audioName.IsValidFileName())
+        {
+            Log.Warning("{Filename} has invalid characters", audioName);
+            throw new ArgumentException($"Filename: {audioName} has invalid characters.");
+        }
+
+        if (url.LastIndexOf('.') == -1 || string.IsNullOrWhiteSpace(url[url.LastIndexOf('.')..]))
+        {
+            Log.Warning("Discord attachment doesn't have a file extension");
+            throw new ArgumentException(
+                "The file you sent has no extension. Please add a valid extension to the file before sending it.");
+        }
+
+        if (AudioRepository.NameExists(audioName))
+        {
+            Log.Warning("An AudioTrack with the name {AudioName} already exists", audioName);
+            throw new AudioTrackExistsException($"An AudioTrack with the name {audioName} already exists.");
+        }
+
+        var fileExtension = url[url.LastIndexOf('.')..];
+        var fileName = audioName + fileExtension;
+        var filePath = Path.Combine(AudioTracksFullPath, fileName);
+        {
+            using var client = new HttpClient();
+            await using var stream = await client.GetStreamAsync(url);
+            await using var fileStream = File.OpenWrite(filePath);
+            await stream.CopyToAsync(fileStream);
+            await fileStream.FlushAsync();
+        }
+        AudioRepository.Add(new AudioTrack(audioName, filePath, userId));
+    }
+
+    /// <summary>
+    ///     Finds a guild with the given guildId. Wraps Client.Guilds.TryGetValue() with logging and exception
+    ///     that will be thrown if the guild cannot be found.
+    /// </summary>
+    /// <param name="guildId">The guild ID to search for.</param>
+    /// <returns>The Guild object with the given ID.</returns>
+    /// <exception cref="Exception">Exception with user-friendly message stating the guild cannot be found.</exception>
+    private static DiscordGuild FindGuild(ulong guildId)
+    {
+        var guildExists = Client.Guilds.TryGetValue(guildId, out var guild);
+        if (guildExists && guild != null) return guild;
+        Log.Warning("Guild with ID: {Id} not found", guildId);
+        throw new Exception($"Guild with ID: {guildId} not found");
+    }
+
     // TODO Add summary docs for everything
+
+    #region Join
+
     public static async Task JoinAsync(DiscordChannel channel)
     {
         var lava = Client.GetLavalink();
@@ -81,6 +133,10 @@ public static class AudioManager
         await JoinAsync(mostCrowdedVoiceChannel);
     }
 
+    #endregion
+
+    #region Leave
+
     public static async Task LeaveAsync(DiscordGuild guild)
     {
         var lava = Client.GetLavalink();
@@ -106,39 +162,9 @@ public static class AudioManager
         await LeaveAsync(FindGuild(guildId));
     }
 
-    public static async Task AddAsync(string audioName, ulong userId, string url)
-    {
-        if (!audioName.IsValidFileName())
-        {
-            Log.Warning("{Filename} has invalid characters", audioName);
-            throw new ArgumentException($"Filename: {audioName} has invalid characters.");
-        }
+    #endregion
 
-        if (url.LastIndexOf('.') == -1 || string.IsNullOrWhiteSpace(url[url.LastIndexOf('.')..]))
-        {
-            Log.Warning("Discord attachment doesn't have a file extension");
-            throw new ArgumentException(
-                "The file you sent has no extension. Please add a valid extension to the file before sending it.");
-        }
-
-        if (AudioRepository.NameExists(audioName))
-        {
-            Log.Warning("An AudioTrack with the name {AudioName} already exists", audioName);
-            throw new AudioTrackExistsException($"An AudioTrack with the name {audioName} already exists.");
-        }
-
-        var fileExtension = url[url.LastIndexOf('.')..];
-        var fileName = audioName + fileExtension;
-        var filePath = Path.Combine(AudioTracksFullPath, fileName);
-        {
-            using var client = new HttpClient();
-            await using var stream = await client.GetStreamAsync(url);
-            await using var fileStream = File.OpenWrite(filePath);
-            await stream.CopyToAsync(fileStream);
-            await fileStream.FlushAsync();
-        }
-        AudioRepository.Add(new AudioTrack(audioName, filePath, userId));
-    }
+    #region Play
 
     public static async Task PlayAsync(AudioTrack audioTrack, DiscordGuild guild)
     {
@@ -173,7 +199,6 @@ public static class AudioManager
             await connection.PlayAsync(result.Tracks.FirstOrDefault());
     }
 
-
     public static async Task PlayAsync(string audioName, DiscordGuild guild, bool searchById = false)
     {
         var audioTrack = searchById
@@ -201,18 +226,5 @@ public static class AudioManager
         await PlayAsync(audioNameOrId, guild, searchById);
     }
 
-    /// <summary>
-    ///     Finds a guild with the given guildId. Wraps Client.Guilds.TryGetValue() with logging and exception
-    ///     that will be thrown if the guild cannot be found.
-    /// </summary>
-    /// <param name="guildId">The guild ID to search for.</param>
-    /// <returns>The Guild object with the given ID.</returns>
-    /// <exception cref="Exception">Exception with user-friendly message stating the guild cannot be found.</exception>
-    private static DiscordGuild FindGuild(ulong guildId)
-    {
-        var guildExists = Client.Guilds.TryGetValue(guildId, out var guild);
-        if (guildExists && guild != null) return guild;
-        Log.Warning("Guild with ID: {Id} not found", guildId);
-        throw new Exception($"Guild with ID: {guildId} not found");
-    }
+    #endregion
 }
