@@ -28,15 +28,14 @@ public class AudioRepository
     {
         using var db = new LiteDatabase(Constants.LiteDatabasePath);
         return db.GetCollection<AudioTrack>()
-            .Exists(a => string.Equals(a.Name, name, StringComparison.InvariantCultureIgnoreCase));
+            .Exists(a => a.Name == name);
     }
 
     public static AudioTrack? FindByNameExact(string name)
     {
         using var db = new LiteDatabase(Constants.LiteDatabasePath);
         return db.GetCollection<AudioTrack>()
-            .Find(a => string.Equals(a.Name, name, StringComparison.InvariantCultureIgnoreCase))
-            .FirstOrDefault();
+            .FindOne(a => a.Name == name);
     }
 
     public static AudioTrack? FindByName(string searchTerm)

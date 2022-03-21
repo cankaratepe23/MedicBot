@@ -73,6 +73,7 @@ public static class AudioManager
         }
 
         AudioRepository.Delete(audioTrack.Id);
+        File.Delete(audioTrack.Path);
     }
 
     /// <summary>

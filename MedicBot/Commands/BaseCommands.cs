@@ -14,13 +14,7 @@ public class BaseCommands : BaseCommandModule
     {
         Log.Information("Test command called by {User}", ctx.User);
         await ctx.RespondAsync($"Test! Current time is: {DateTime.Now}");
-
-        var botSetting = SettingsRepository.Get(remainingText);
-        var message = botSetting == null
-            ? $"Could not find setting with key: \"{remainingText}\""
-            : $"Found setting value: {botSetting}";
-
-        await ctx.RespondAsync(message);
+        await ctx.RespondAsync(remainingText);
     }
 
     [Command("shutdown")]

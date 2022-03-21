@@ -82,6 +82,7 @@ public class AudioCommands : BaseCommandModule
         await ctx.Message.RespondThumbsUpAsync();
     }
 
+    [Command("delete")]
     public async Task DeleteCommand(CommandContext ctx, [RemainingText] string audioName)
     {
         try
