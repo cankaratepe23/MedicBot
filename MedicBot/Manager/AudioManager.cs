@@ -1,4 +1,4 @@
-using DSharpPlus;
+﻿using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.Lavalink;
 using MedicBot.Exceptions;
@@ -108,6 +108,17 @@ public static class AudioManager
 
     public static async Task AddAsync(string audioName, ulong userId, string url)
     {
+        if (!audioName.IsValidFileName())
+        {
+            Log.Warning("{Filename} has invalid characters", audioName);
+            throw new ArgumentException($"Filename: {audioName} has invalid characters.");
+        }
+        if (url.LastIndexOf('.') == -1 || string.IsNullOrWhiteSpace(url[url.LastIndexOf('.')..]))
+        {
+            Log.Warning("Discord attachment doesn't have a file extension");
+            throw new ArgumentException(
+                "The file you sent has no extension. Please add a valid extension to the file before sending it.");
+        }
         if (AudioRepository.NameExists(audioName))
         {
             Log.Warning("An AudioTrack with the name {AudioName} already exists", audioName);
