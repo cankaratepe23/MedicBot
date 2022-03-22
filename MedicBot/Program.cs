@@ -108,6 +108,7 @@ internal static class Program
         commands.RegisterCommands<BaseCommands>();
         commands.RegisterCommands<AudioCommands>();
         commands.RegisterCommands<SettingsCommands>();
+        commands.RegisterCommands<ImportExportCommands>();
         commands.RegisterConverter(new StringLowercaseConverter());
 
         // Register events
