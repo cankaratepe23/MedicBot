@@ -1,4 +1,5 @@
-﻿namespace MedicBot.Model;
+﻿#pragma warning disable CS8618
+namespace MedicBot.Model;
 
 public class LegacyAudioEntry
 {
