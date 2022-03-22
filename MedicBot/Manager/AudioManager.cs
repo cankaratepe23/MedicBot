@@ -217,8 +217,14 @@ public static class AudioManager
 
         var audioFile = new FileInfo(audioTrack.Path);
         var result = await connection.GetTracksAsync(audioFile);
-        if (result.LoadResultType == LavalinkLoadResultType.TrackLoaded)
-            await connection.PlayAsync(result.Tracks.FirstOrDefault());
+        if (result.LoadResultType != LavalinkLoadResultType.TrackLoaded)
+        {
+            Log.Warning("Lavalink failed to load the track {@Track} with failure type: {Type}", audioTrack,
+                result.LoadResultType);
+            throw new LavalinkLoadFailedException(result.LoadResultType.ToString());
+        }
+
+        await connection.PlayAsync(result.Tracks.FirstOrDefault());
     }
 
     public static async Task PlayAsync(string audioName, DiscordGuild guild, bool searchById = false)

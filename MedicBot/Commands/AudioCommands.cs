@@ -109,5 +109,9 @@ public class AudioCommands : BaseCommandModule
         {
             await ctx.RespondAsync(e.Message);
         }
+        catch (LavalinkLoadFailedException e)
+        {
+            await ctx.RespondAsync($"Lavalink failed to load the track with error: {e.Message}");
+        }
     }
 }
