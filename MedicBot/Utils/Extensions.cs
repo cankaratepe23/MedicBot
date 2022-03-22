@@ -1,5 +1,8 @@
 ﻿using DSharpPlus;
+using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
+using MedicBot.Exceptions;
+using Serilog;
 
 namespace MedicBot.Utils;
 
@@ -26,5 +29,18 @@ public static class Extensions
             .Where(c => c.Type == ChannelType.Voice)
             .OrderByDescending(c => c.Users.Count(u => !u.IsBot))
             .FirstOrDefault();
+    }
+
+    public static DiscordAttachment GetFirstAttachment(this CommandContext ctx)
+    {
+        if (ctx.Message.Attachments.Count == 0 || ctx.Message.Attachments[0] == null)
+        {
+            Log.Warning("No attachments found in {Message}", ctx.Message);
+            throw new AttachmentMissingException("This command requires an attachment.");
+        }
+
+        if (ctx.Message.Attachments.Count > 1) Log.Information("Ignoring multiple attachments sent to add command");
+
+        return ctx.Message.Attachments[0];
     }
 }

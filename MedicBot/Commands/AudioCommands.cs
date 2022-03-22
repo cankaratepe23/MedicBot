@@ -4,7 +4,6 @@ using DSharpPlus.Entities;
 using MedicBot.Exceptions;
 using MedicBot.Manager;
 using MedicBot.Utils;
-using Serilog;
 
 namespace MedicBot.Commands;
 
@@ -56,22 +55,9 @@ public class AudioCommands : BaseCommandModule
     [Command("add")]
     public async Task AddCommand(CommandContext ctx, [RemainingText] string audioName)
     {
-        if (ctx.Message.Attachments.Count == 0 || ctx.Message.Attachments[0] == null)
-        {
-            Log.Warning("No attachments found in {Message}", ctx.Message);
-            await ctx.RespondAsync("This command requires an attachment.");
-            return;
-        }
-
-        if (ctx.Message.Attachments.Count > 1)
-        {
-            Log.Information("Ignoring multiple attachments sent to add command");
-            await ctx.RespondAsync("You sent multiple attachments. Only the first attachment will be considered.");
-        }
-
         try
         {
-            await AudioManager.AddAsync(audioName, ctx.Member.Id, ctx.Message.Attachments[0].Url);
+            await AudioManager.AddAsync(audioName, ctx.Member.Id, ctx.GetFirstAttachment().Url);
         }
         catch (Exception e)
         {
