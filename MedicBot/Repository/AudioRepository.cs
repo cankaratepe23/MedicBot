@@ -62,11 +62,10 @@ public class AudioRepository
         foreach (var item in allTracks)
         {
             var distance = lev.DistanceFrom(item.Name);
-            if (distance < minDistance)
-            {
-                minDistance = distance;
-                closestMatch = item;
-            }
+            if (distance >= minDistance) continue;
+            minDistance = distance;
+            closestMatch = item;
+            if (minDistance == 0) break;
         }
 
         return closestMatch;
