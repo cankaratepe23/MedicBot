@@ -6,3 +6,4 @@ riderModule.iml
 *.db
 res/
 MedicBot/res/
+*.json
