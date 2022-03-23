@@ -1,8 +1,10 @@
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
+using DSharpPlus.EventArgs;
 using DSharpPlus.Lavalink;
 using LiteDB;
 using MedicBot.Commands;
+using MedicBot.EventHandler;
 using MedicBot.Manager;
 using MedicBot.Model;
 using MedicBot.Utils;
@@ -120,6 +122,8 @@ internal static class Program
             await Cleanup();
             Environment.Exit(0);
         });
+        discord.VoiceStateUpdated += VoiceStateHandler.DiscordOnVoiceStateUpdated;
+
 
         // Startup
         await app.StartAsync();

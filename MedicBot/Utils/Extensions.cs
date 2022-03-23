@@ -1,6 +1,7 @@
 ﻿using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
+using DSharpPlus.EventArgs;
 using MedicBot.Exceptions;
 using Serilog;
 
@@ -43,5 +44,20 @@ public static class Extensions
         if (message.Attachments.Count > 1) Log.Information("Ignoring multiple attachments sent to add command");
 
         return message.Attachments[0];
+    }
+
+    public static IEnumerable<DiscordMember> GetNonBotUsers(this DiscordChannel channel)
+    {
+        return channel.Users.Where(member => !member.IsBot);
+    }
+
+    public static bool IsJoinEvent(this VoiceStateUpdateEventArgs e)
+    {
+        return (e.Before == null || e.Before.Channel == null) && e.After != null && e.After.Channel != null;
+    }
+
+    public static bool IsDisconnectEvent(this VoiceStateUpdateEventArgs e)
+    {
+        return (e.After == null || e.After.Channel == null) && e.Before != null && e.Before.Channel != null;
     }
 }
