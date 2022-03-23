@@ -31,16 +31,17 @@ public static class Extensions
             .FirstOrDefault();
     }
 
-    public static DiscordAttachment GetFirstAttachment(this CommandContext ctx)
+    public static DiscordAttachment GetFirstAttachment(this DiscordMessage message)
     {
-        if (ctx.Message.Attachments.Count == 0 || ctx.Message.Attachments[0] == null)
+        if (message.Attachments.Count == 0 || message.Attachments[0] == null)
         {
-            Log.Warning("No attachments found in {Message}", ctx.Message);
-            throw new AttachmentMissingException("This command requires an attachment.");
+            Log.Warning("No attachments found in {Message}", message);
+            throw new AttachmentMissingException(
+                "The message you sent has no attachment. This command requires an attachment.");
         }
 
-        if (ctx.Message.Attachments.Count > 1) Log.Information("Ignoring multiple attachments sent to add command");
+        if (message.Attachments.Count > 1) Log.Information("Ignoring multiple attachments sent to add command");
 
-        return ctx.Message.Attachments[0];
+        return message.Attachments[0];
     }
 }

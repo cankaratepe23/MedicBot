@@ -17,7 +17,7 @@ public class ImportExportCommands : BaseCommandModule
         await ctx.RespondAsync("Starting import...");
         try
         {
-            await ImportExportManager.Import(ctx.GetFirstAttachment().Url);
+            await ImportExportManager.Import(ctx.Message.GetFirstAttachment().Url);
         }
         catch (Exception e)
         {

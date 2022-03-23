@@ -51,13 +51,12 @@ public class AudioCommands : BaseCommandModule
         }
     }
 
-    // TODO: Overloads for the add comment: Attachment, youtube link maybe?, id of message with attachment 
-    [Command("add")]
+    [Command("add"), Priority(0)]
     public async Task AddCommand(CommandContext ctx, [RemainingText] string audioName)
     {
         try
         {
-            await AudioManager.AddAsync(audioName, ctx.Member.Id, ctx.GetFirstAttachment().Url);
+            await AudioManager.AddAsync(audioName, ctx.Member.Id, ctx.Message.GetFirstAttachment().Url);
         }
         catch (Exception e)
         {
@@ -67,6 +66,27 @@ public class AudioCommands : BaseCommandModule
 
         await ctx.Message.RespondThumbsUpAsync();
     }
+
+    // This overload needs to have higher priority than the AddCommand(CommandContext, string) overload,
+    // because if not, the message id is parsed as part of the string.
+    [Command("add"), Priority(1)]
+    
+    public async Task AddCommand(CommandContext ctx, DiscordMessage message, [RemainingText] string audioName)
+    {
+        try
+        {
+            await AudioManager.AddAsync(audioName, ctx.Member.Id, message.GetFirstAttachment().Url);
+        }
+        catch (Exception e)
+        {
+            await ctx.RespondAsync(e.Message);
+            return;
+        }
+
+        await ctx.Message.RespondThumbsUpAsync();
+    }
+    
+    // TODO Download from YouTube link
 
     [Command("delete")]
     public async Task DeleteCommand(CommandContext ctx, [RemainingText] string audioName)
