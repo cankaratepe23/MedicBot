@@ -51,7 +51,8 @@ public class AudioCommands : BaseCommandModule
         }
     }
 
-    [Command("add"), Priority(0)]
+    [Command("add")]
+    [Priority(0)]
     public async Task AddCommand(CommandContext ctx, [RemainingText] string audioName)
     {
         try
@@ -69,8 +70,8 @@ public class AudioCommands : BaseCommandModule
 
     // This overload needs to have higher priority than the AddCommand(CommandContext, string) overload,
     // because if not, the message id is parsed as part of the string.
-    [Command("add"), Priority(1)]
-    
+    [Command("add")]
+    [Priority(1)]
     public async Task AddCommand(CommandContext ctx, DiscordMessage message, [RemainingText] string audioName)
     {
         try
@@ -85,7 +86,7 @@ public class AudioCommands : BaseCommandModule
 
         await ctx.Message.RespondThumbsUpAsync();
     }
-    
+
     // TODO Download from YouTube link
 
     [Command("delete")]

@@ -92,7 +92,8 @@ internal static class Program
 
         #endregion
 
-        // Initializations
+        #region Initializations
+
         // Ensure tracks folder exists
         var audioTracksPath = Path.Combine(Environment.CurrentDirectory, Constants.AudioTracksPath);
         if (!Directory.Exists(audioTracksPath))
@@ -110,6 +111,8 @@ internal static class Program
         commands.RegisterCommands<SettingsCommands>();
         commands.RegisterCommands<ImportExportCommands>();
         commands.RegisterConverter(new StringLowercaseConverter());
+
+        #endregion
 
         // Register events
         app.Lifetime.ApplicationStopping.Register(async () =>

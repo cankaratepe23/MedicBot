@@ -225,6 +225,7 @@ public static class AudioManager
         }
 
         await connection.PlayAsync(result.Tracks.FirstOrDefault());
+        // TODO Add green circle (voice state update) during playback.
     }
 
     public static async Task PlayAsync(string audioName, DiscordGuild guild, bool searchById = false)
