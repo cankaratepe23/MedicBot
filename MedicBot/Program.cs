@@ -26,13 +26,43 @@ internal static class Program
     {
         // Configuration
 
+        #region WebApp Config
+
+        var builder = WebApplication.CreateBuilder();
+        builder.Services.AddControllers();
+        builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddSwaggerGen();
+
+        var app = builder.Build();
+
+        // Configure the HTTP request pipeline.
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseSwagger();
+            app.UseSwaggerUI();
+        }
+
+        app.UseHttpsRedirection();
+
+        app.UseAuthorization();
+
+        app.MapControllers();
+
+        #endregion
+        
         #region Logger Config
 
-        Log.Logger = new LoggerConfiguration()
+        var loggerConfiguration = new LoggerConfiguration()
             .MinimumLevel.Information()
             .WriteTo.Console(
-                outputTemplate: Constants.SerilogOutputTemplate)
-            .CreateLogger();
+                outputTemplate: Constants.SerilogOutputTemplate);
+
+        if (app.Environment.IsDevelopment())
+        {
+            loggerConfiguration.MinimumLevel.Debug();
+        }
+
+        Log.Logger = loggerConfiguration.CreateLogger();
 
         var logFactory = new LoggerFactory().AddSerilog();
 
@@ -70,30 +100,6 @@ internal static class Program
 
         #endregion
 
-        #region WebApp Config
-
-        var builder = WebApplication.CreateBuilder();
-        builder.Services.AddControllers();
-        builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddSwaggerGen();
-
-        var app = builder.Build();
-
-        // Configure the HTTP request pipeline.
-        if (app.Environment.IsDevelopment())
-        {
-            app.UseSwagger();
-            app.UseSwaggerUI();
-        }
-
-        app.UseHttpsRedirection();
-
-        app.UseAuthorization();
-
-        app.MapControllers();
-
-        #endregion
-
         #region Initializations
 
         // Ensure tracks folder exists
@@ -123,6 +129,11 @@ internal static class Program
             Environment.Exit(0);
         });
         discord.VoiceStateUpdated += VoiceStateHandler.DiscordOnVoiceStateUpdated;
+        discord.GuildDownloadCompleted += (sender, args) =>
+        {
+            VoiceStateHandler.StartTracking(sender);
+            return Task.CompletedTask;
+        };
 
 
         // Startup
