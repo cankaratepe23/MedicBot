@@ -16,7 +16,7 @@ public static class Constants
     public const string LiteDatabasePath = @"Filename=medicbot_store.db;connection=shared";
 
     public const string ThumbsUpUnicode = "👍";
-
+    public const int MinNumberOfUsersNeededToEarnPoints = 2;
 
     public const string JoinAsyncLavalinkNotConnectedLog =
         "JoinAsync() called before a Lavalink connection established";
