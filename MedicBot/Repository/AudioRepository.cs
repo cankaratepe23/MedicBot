@@ -15,7 +15,7 @@ public class AudioRepository
         using var db = new LiteDatabase(Constants.LiteDatabasePath);
         var collection = db.GetCollection<AudioTrack>();
         collection.EnsureIndex(a => a.Name);
-        Log.Information(Constants.DbCollectionInitializedBotSettings);
+        Log.Information(Constants.DbCollectionInitializedAudioTracks);
     }
 
     public static AudioTrack? FindById(string id)

@@ -1,4 +1,4 @@
-﻿using DSharpPlus.Net;
+using DSharpPlus.Net;
 
 namespace MedicBot.Utils;
 
@@ -30,6 +30,7 @@ public static class Constants
     public const string NotConnectedToVoiceLog = "LeaveAsync() called when bot not in a voice channel";
     public const string NotConnectedToVoiceMessage = "Not connected to any channel.";
 
+    public const string DbCollectionInitializedAudioTracks = "AudioTrack collection in LiteDb initialized";
     public const string DbCollectionInitializedBotSettings = "BotSetting collection in LiteDb initialized";
 
     public static readonly char[] InvalidFileNameChars =
