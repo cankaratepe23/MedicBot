@@ -1,13 +1,20 @@
-﻿namespace MedicBot.Model;
+﻿using LiteDB;
+
+namespace MedicBot.Model;
 
 public class BotSetting
 {
-    public BotSetting(string key, string value)
+    public BotSetting()
+    {
+    }
+
+    public BotSetting(string key, object value)
     {
         Key = key;
         Value = value;
     }
 
+    public ObjectId Id { get; set; }
     public string Key { get; set; }
-    public string Value { get; set; }
+    public object Value { get; set; }
 }

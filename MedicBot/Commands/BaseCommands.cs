@@ -1,5 +1,6 @@
 ﻿using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
+using MedicBot.Repository;
 using Serilog;
 
 namespace MedicBot.Commands;
@@ -12,8 +13,7 @@ public class BaseCommands : BaseCommandModule
     public async Task TestCommand(CommandContext ctx, [RemainingText] string remainingText)
     {
         Log.Information("Test command called by {User}", ctx.User);
-        await ctx.RespondAsync($"Test! Current time is: {DateTime.Now}");
-        await ctx.RespondAsync(remainingText);
+        await ctx.RespondAsync(SettingsRepository.GetValue<int>(remainingText).ToString());
     }
 
     [Command("shutdown")]

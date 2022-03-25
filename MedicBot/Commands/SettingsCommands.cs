@@ -1,5 +1,6 @@
 ﻿using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
+using DSharpPlus.Entities;
 using MedicBot.Repository;
 using MedicBot.Utils;
 
@@ -30,5 +31,18 @@ public class SettingsCommands : BaseCommandModule
             await ctx.RespondAsync($"Setting {key} has value: {botSetting.Value}");
         else
             await ctx.RespondAsync($"Setting {key} does not exist.");
+    }
+    
+    [Command("get")]
+    public async Task SettingGetCommand(CommandContext ctx)
+    {
+        var allSettings = SettingsRepository.All();
+        var builder = new DiscordEmbedBuilder().WithTitle("MedicBot Settings");
+        foreach (var botSetting in allSettings)
+        {
+            builder.AddField(botSetting.Key, botSetting.Value.ToString());
+        }
+
+        await ctx.RespondAsync(builder);
     }
 }
