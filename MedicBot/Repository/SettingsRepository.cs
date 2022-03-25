@@ -58,7 +58,7 @@ public static class SettingsRepository
     {
         using var db = new LiteDatabase(Constants.LiteDatabasePath);
         var botSetting = Get(key);
-        if (Constants.IntegerSettingKeys.Contains(key))
+        if (Constants.IntegerSettingKeys.Contains(key)) // TODO Add listeners for specific settings
         {
             value = Convert.ToInt32(value);
         }

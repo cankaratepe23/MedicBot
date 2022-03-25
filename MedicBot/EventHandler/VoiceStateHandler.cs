@@ -1,4 +1,5 @@
-﻿using DSharpPlus;
+﻿using System.ComponentModel;
+using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using MedicBot.Manager;
@@ -11,12 +12,21 @@ namespace MedicBot.EventHandler;
 public static class VoiceStateHandler
 {
     private static readonly Dictionary<ulong, Dictionary<ulong, UserVoiceStateInfo>> VoiceStateTrackers = new();
+    private static bool IsTracking = false;
+    public static DiscordClient Client { get; set; } = null!;
+    private static int _minNumberOfUsersNeededToEarnPoints;
 
-    private static int minNumberOfUsersNeededToEarnPoints = int.MaxValue;
+    private static int MinNumberOfUsersNeededToEarnPoints { get; set; }
 
     static VoiceStateHandler()
     {
-        minNumberOfUsersNeededToEarnPoints = SettingsRepository.GetValue<int>(Constants.MinNumberOfUsersNeededToEarnPoints);
+        MinNumberOfUsersNeededToEarnPoints = SettingsRepository.GetValue<int>(Constants.MinNumberOfUsersNeededToEarnPoints);
+    }
+
+    public static void Init(DiscordClient client)
+    {
+        Client = client;
+        IsTracking = true;
     }
 
     public static Task DiscordOnVoiceStateUpdated(DiscordClient sender, VoiceStateUpdateEventArgs e)
@@ -26,7 +36,7 @@ public static class VoiceStateHandler
         // TODO If more functionality is to be added into this event handler, moving each separate function to different methods would increase readability.
         if (!e.User.IsBot)
         {
-            minNumberOfUsersNeededToEarnPoints =
+            MinNumberOfUsersNeededToEarnPoints =
                 SettingsRepository.GetValue<int>(Constants.MinNumberOfUsersNeededToEarnPoints);
             var channel = e.Channel ?? e.Before.Channel;
             var nonBotUsersCount = channel.Users.Count(member => !member.IsBot);
@@ -53,11 +63,11 @@ public static class VoiceStateHandler
     private static void TrackerUserJoin(DiscordUser eventUser, int nonBotUsersCount, DiscordChannel channel)
     {
         Log.Debug("Join event of {User}", eventUser);
-        if (nonBotUsersCount < minNumberOfUsersNeededToEarnPoints)
+        if (nonBotUsersCount < MinNumberOfUsersNeededToEarnPoints)
         {
             Log.Debug(
                 "{Channel} does not have enough users to earn points (Current minimum is: {Minimum}, channel has {Current} users",
-                channel, minNumberOfUsersNeededToEarnPoints, nonBotUsersCount);
+                channel, MinNumberOfUsersNeededToEarnPoints, nonBotUsersCount);
         }
         else
         {
@@ -85,7 +95,7 @@ public static class VoiceStateHandler
     private static void TrackerUserDisconnect(DiscordUser eventUser, int nonBotUsersCount, ulong channelId)
     {
         Log.Debug("Disconnect event of {User}", eventUser);
-        if (nonBotUsersCount < minNumberOfUsersNeededToEarnPoints)
+        if (nonBotUsersCount < MinNumberOfUsersNeededToEarnPoints)
         {
             TrackerRemoveChannel(channelId);
         }
@@ -118,15 +128,29 @@ public static class VoiceStateHandler
 
         VoiceStateTrackers[channelId].Clear();
     }
-
-    public static void StartTracking(DiscordClient sender)
+    
+    public static void StartTracking()
     {
-        var allPopulatedVoiceChannels = sender.Guilds.Values.SelectMany(guild =>
-            guild.Channels.Values.Where(channel => channel.Type == ChannelType.Voice && channel.Users.Count(member => !member.IsBot) >= minNumberOfUsersNeededToEarnPoints));
+        var allPopulatedVoiceChannels = Client.Guilds.Values.SelectMany(guild =>
+            guild.Channels.Values.Where(channel => channel.Type == ChannelType.Voice && channel.Users.Count(member => !member.IsBot) >= MinNumberOfUsersNeededToEarnPoints));
         foreach (var channel in allPopulatedVoiceChannels)
         {
             TrackAllInChannel(channel);
         }
+    }
+    
+    private static void ReloadTracking()
+    {
+        if (!IsTracking)
+        {
+            return;
+        }
+        foreach (var (channelId,_) in VoiceStateTrackers)
+        {
+            TrackerRemoveChannel(channelId);
+        }
+
+        StartTracking();
     }
 }
 

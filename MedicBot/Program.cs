@@ -107,7 +107,7 @@ internal static class Program
         if (!Directory.Exists(audioTracksPath))
             Directory.CreateDirectory(audioTracksPath);
         AudioManager.Init(discord, audioTracksPath);
-
+        VoiceStateHandler.Init(discord);
 
         // Commands Init
         var commands = discord.UseCommandsNext(new CommandsNextConfiguration
@@ -131,7 +131,7 @@ internal static class Program
         discord.VoiceStateUpdated += VoiceStateHandler.DiscordOnVoiceStateUpdated;
         discord.GuildDownloadCompleted += (sender, args) =>
         {
-            VoiceStateHandler.StartTracking(sender);
+            VoiceStateHandler.StartTracking();
             return Task.CompletedTask;
         };
 
