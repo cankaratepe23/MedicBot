@@ -153,6 +153,7 @@ internal static class Program
     {
         if (_client == null) return;
 
+        VoiceStateHandler.ReloadTracking();
         await _client.GetLavalink().GetNodeConnection(Constants.LavalinkEndpoint).StopAsync();
         await _client.DisconnectAsync();
         _client.Dispose();

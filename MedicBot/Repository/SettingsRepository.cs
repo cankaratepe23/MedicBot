@@ -1,4 +1,5 @@
 ﻿using LiteDB;
+using MedicBot.EventHandler;
 using MedicBot.Model;
 using MedicBot.Utils;
 using Serilog;
@@ -52,13 +53,17 @@ public static class SettingsRepository
             botSetting.Value = value;
         }
         db.GetCollection<BotSetting>().Upsert(botSetting);
+        if (Constants.ObservedSettingKeys.Contains(key))
+        {
+            BotSettingHandler.BotSettingChangedHandler(key);
+        }
     }
     
     public static void Init(string key, object value)
     {
         using var db = new LiteDatabase(Constants.LiteDatabasePath);
         var botSetting = Get(key);
-        if (Constants.IntegerSettingKeys.Contains(key)) // TODO Add listeners for specific settings
+        if (Constants.IntegerSettingKeys.Contains(key))
         {
             value = Convert.ToInt32(value);
         }

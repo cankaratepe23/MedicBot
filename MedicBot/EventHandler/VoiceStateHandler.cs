@@ -20,9 +20,15 @@ public static class VoiceStateHandler
 
     static VoiceStateHandler()
     {
-        MinNumberOfUsersNeededToEarnPoints = SettingsRepository.GetValue<int>(Constants.MinNumberOfUsersNeededToEarnPoints);
+        UpdateThreshold();
+        // TODO Check if this is necessarry
     }
 
+    private static void UpdateThreshold()
+    {
+        MinNumberOfUsersNeededToEarnPoints = SettingsRepository.GetValue<int>(Constants.MinNumberOfUsersNeededToEarnPoints);
+    }
+    
     public static void Init(DiscordClient client)
     {
         Client = client;
@@ -32,12 +38,10 @@ public static class VoiceStateHandler
     public static Task DiscordOnVoiceStateUpdated(DiscordClient sender, VoiceStateUpdateEventArgs e)
     {
         // TODO Check if a semaphore is needed
-        // TODO Get rid of magic numbers, make non-bot user count needed to earn scores configurable.
         // TODO If more functionality is to be added into this event handler, moving each separate function to different methods would increase readability.
         if (!e.User.IsBot)
         {
-            MinNumberOfUsersNeededToEarnPoints =
-                SettingsRepository.GetValue<int>(Constants.MinNumberOfUsersNeededToEarnPoints);
+           UpdateThreshold();
             var channel = e.Channel ?? e.Before.Channel;
             var nonBotUsersCount = channel.Users.Count(member => !member.IsBot);
             if (e.IsJoinEvent())
@@ -48,13 +52,8 @@ public static class VoiceStateHandler
             {
                 TrackerUserDisconnect(e.User, nonBotUsersCount, channel.Id);
             }
-            else
-            {
-                Log.Warning("Voice state updated event handler has encountered an unexpected condition");
-                Log.Warning("Details of the exceptional voice state update event:");
-                Log.Warning("{@VoiceStateUpdateEventArgs}", e);
-                Log.Warning("{@DiscordClient}", sender);
-            }
+            // TODO else case: A user may change voice channels. This is neither a connect nor disconnect case,
+            // but they but should be removed from the tracker and re-added to the new channel's tracker.
         }
 
         return Task.CompletedTask;
@@ -108,6 +107,7 @@ public static class VoiceStateHandler
                     $"User {eventUser} left a voice channel that had more than {Constants.MinNumberOfUsersNeededToEarnPoints} users connected, but was not found in the trackers list.");
 
             voiceStateInfo.FinishTime = DateTime.UtcNow;
+            UserManager.AddScore(voiceStateInfo.User, voiceStateInfo.GetTimeSpentInVoice());
             VoiceStateTrackers[channelId].Remove(eventUser.Id);
         }
     }
@@ -128,19 +128,25 @@ public static class VoiceStateHandler
 
         VoiceStateTrackers[channelId].Clear();
     }
-    
+
     public static void StartTracking()
     {
+        UpdateThreshold();
+        Log.Information("Initialize tracking");
         var allPopulatedVoiceChannels = Client.Guilds.Values.SelectMany(guild =>
             guild.Channels.Values.Where(channel => channel.Type == ChannelType.Voice && channel.Users.Count(member => !member.IsBot) >= MinNumberOfUsersNeededToEarnPoints));
+        var channelCounter = 0;
         foreach (var channel in allPopulatedVoiceChannels)
         {
             TrackAllInChannel(channel);
+            channelCounter++;
         }
+        Log.Information("Started tracking {Count} populated channel(s)", channelCounter);
     }
     
-    private static void ReloadTracking()
+    public static void ReloadTracking()
     {
+        UpdateThreshold();
         if (!IsTracking)
         {
             return;
