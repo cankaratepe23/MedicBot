@@ -1,6 +1,9 @@
-﻿using MedicBot.Exceptions;
+﻿using System.Security.Claims;
+using MedicBot.Exceptions;
 using MedicBot.Manager;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Serilog;
 
 namespace MedicBot.Controller;
 
@@ -9,7 +12,7 @@ namespace MedicBot.Controller;
 public class AudioController : ControllerBase
 {
     [HttpGet("JoinGuild/{guildId}")]
-    public async Task<ActionResult> JoinGuild(ulong guildId)
+    public async Task<IActionResult> JoinGuild(ulong guildId)
     {
         try
         {
@@ -25,7 +28,7 @@ public class AudioController : ControllerBase
     }
 
     [HttpGet("JoinChannel/{channelId}")]
-    public async Task<ActionResult> JoinChannel(ulong channelId)
+    public async Task<IActionResult> JoinChannel(ulong channelId)
     {
         try
         {
@@ -40,7 +43,7 @@ public class AudioController : ControllerBase
     }
 
     [HttpGet("Leave/{guildId}")]
-    public async Task<ActionResult> Leave(ulong guildId)
+    public async Task<IActionResult> Leave(ulong guildId)
     {
         try
         {
@@ -55,9 +58,12 @@ public class AudioController : ControllerBase
     }
 
     [HttpGet("Play/{guildId}")]
-    public async Task<ActionResult> Play(ulong guildId, [FromQuery] string audioNameOrId,
+    [Authorize]
+    public async Task<IActionResult> Play(ulong guildId, [FromQuery] string audioNameOrId,
         [FromQuery] bool searchById = false)
     {
+        Log.Debug("User's ID is: {UserId}",
+            HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value);
         try
         {
             // TODO: Change null to the discord member when Authentication is implemented

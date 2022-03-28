@@ -1,3 +1,4 @@
+using AspNet.Security.OAuth.Discord;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.Lavalink;
@@ -7,6 +8,7 @@ using MedicBot.EventHandler;
 using MedicBot.Manager;
 using MedicBot.Model;
 using MedicBot.Utils;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Serilog;
 
 namespace MedicBot;
@@ -31,14 +33,23 @@ internal static class Program
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
-        builder.Services.AddAuthentication().AddDiscord(options =>
+        var clientId = Environment.GetEnvironmentVariable(Constants.OAuthClientIdEnvironmentVariableName);
+        var clientSecret = Environment.GetEnvironmentVariable(Constants.OAuthClientSecretEnvironmentVariableName);
+        if (clientId == null || clientSecret == null)
         {
-            options.ClientId = Environment.GetEnvironmentVariable(Constants.OAuthClientIdEnvironmentVariableName) ??
-                               throw new InvalidOperationException();
-            options.ClientSecret =
-                Environment.GetEnvironmentVariable(Constants.OAuthClientSecretEnvironmentVariableName) ??
-                throw new InvalidOperationException();
-        });
+            throw new InvalidOperationException("Discord OAuth environment variables are not set.");
+        }
+
+        _ = DiscordAuthenticationDefaults.CallbackPath;
+        builder.Services.AddAuthentication(options =>
+            {
+                options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            }).AddCookie()
+            .AddDiscord(options =>
+            {
+                options.ClientId = clientId;
+                options.ClientSecret = clientSecret;
+            });
 
         var app = builder.Build();
 
@@ -50,6 +61,8 @@ internal static class Program
         }
 
         app.UseHttpsRedirection();
+
+        app.UseAuthentication();
 
         app.UseAuthorization();
 
