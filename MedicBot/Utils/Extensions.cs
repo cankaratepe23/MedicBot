@@ -48,6 +48,25 @@ public static class Extensions
         return message.Attachments[0];
     }
 
+    /// <summary>
+    ///     Finds a guild with the given guildId. Wraps Client.Guilds.TryGetValue() with logging and exception
+    ///     that will be thrown if the guild cannot be found.
+    /// </summary>
+    /// <param name="guildId">The guild ID to search for.</param>
+    /// <returns>The Guild object with the given ID.</returns>
+    /// <exception cref="Exception">Exception with user-friendly message stating the guild cannot be found.</exception>
+    public static DiscordGuild FindGuild(this DiscordClient client, ulong guildId)
+    {
+        var guildExists = client.Guilds.TryGetValue(guildId, out var guild);
+        if (guildExists && guild != null)
+        {
+            return guild;
+        }
+
+        Log.Warning("Guild with ID: {Id} not found", guildId);
+        throw new Exception($"Guild with ID: {guildId} not found");
+    }
+
     public static IEnumerable<DiscordMember> GetNonBotUsers(this DiscordChannel channel)
     {
         return channel.Users.Where(member => !member.IsBot);

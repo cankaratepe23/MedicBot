@@ -80,25 +80,6 @@ public static class AudioManager
         File.Delete(audioTrack.Path);
     }
 
-    /// <summary>
-    ///     Finds a guild with the given guildId. Wraps Client.Guilds.TryGetValue() with logging and exception
-    ///     that will be thrown if the guild cannot be found.
-    /// </summary>
-    /// <param name="guildId">The guild ID to search for.</param>
-    /// <returns>The Guild object with the given ID.</returns>
-    /// <exception cref="Exception">Exception with user-friendly message stating the guild cannot be found.</exception>
-    private static DiscordGuild FindGuild(ulong guildId)
-    {
-        var guildExists = Client.Guilds.TryGetValue(guildId, out var guild);
-        if (guildExists && guild != null)
-        {
-            return guild;
-        }
-
-        Log.Warning("Guild with ID: {Id} not found", guildId);
-        throw new Exception($"Guild with ID: {guildId} not found");
-    }
-
     // TODO Add summary docs for everything
 
     #region Join
@@ -147,7 +128,7 @@ public static class AudioManager
 
     public static async Task JoinGuildIdAsync(ulong guildId)
     {
-        await JoinGuildAsync(FindGuild(guildId));
+        await JoinGuildAsync(Client.FindGuild(guildId));
     }
 
     public static async Task JoinGuildAsync(DiscordGuild guild)
@@ -189,7 +170,7 @@ public static class AudioManager
 
     public static async Task LeaveAsync(ulong guildId)
     {
-        await LeaveAsync(FindGuild(guildId));
+        await LeaveAsync(Client.FindGuild(guildId));
     }
 
     #endregion
@@ -253,13 +234,13 @@ public static class AudioManager
 
     public static async Task PlayAsync(AudioTrack audioTrack, ulong guildId)
     {
-        var guild = FindGuild(guildId);
+        var guild = Client.FindGuild(guildId);
         await PlayAsync(audioTrack, guild);
     }
 
     public static async Task PlayAsync(string audioNameOrId, ulong guildId, bool searchById = false)
     {
-        var guild = FindGuild(guildId);
+        var guild = Client.FindGuild(guildId);
         await PlayAsync(audioNameOrId, guild, searchById);
     }
 
