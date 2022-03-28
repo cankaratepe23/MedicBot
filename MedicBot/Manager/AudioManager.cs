@@ -232,12 +232,6 @@ public static class AudioManager
         await PlayAsync(audioTrack, guild);
     }
 
-    public static async Task PlayAsync(AudioTrack audioTrack, ulong guildId)
-    {
-        var guild = Client.FindGuild(guildId);
-        await PlayAsync(audioTrack, guild);
-    }
-
     public static async Task PlayAsync(string audioNameOrId, ulong guildId, bool searchById = false)
     {
         var guild = Client.FindGuild(guildId);
