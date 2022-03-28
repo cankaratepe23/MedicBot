@@ -1,4 +1,4 @@
-﻿using DSharpPlus;
+using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
@@ -49,6 +49,11 @@ public static class Extensions
     public static IEnumerable<DiscordMember> GetNonBotUsers(this DiscordChannel channel)
     {
         return channel.Users.Where(member => !member.IsBot);
+    }
+
+    public static int CountNonBotUsers(this DiscordChannel channel)
+    {
+        return channel.Users.Count(member => !member.IsBot);
     }
 
     public static bool IsJoinEvent(this VoiceStateUpdateEventArgs e)
