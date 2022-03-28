@@ -1,4 +1,4 @@
-﻿using DSharpPlus.Net;
+using DSharpPlus.Net;
 
 namespace MedicBot.Utils;
 
@@ -31,6 +31,8 @@ public static class Constants
 
     public const string DbCollectionInitializedAudioTracks = "AudioTrack collection in LiteDb initialized";
     public const string DbCollectionInitializedBotSettings = "BotSetting collection in LiteDb initialized";
+    public const string DbCollectionInitializedUserPoints = "UserPoints collection in LiteDb initialized";
+
 
     public const string MinNumberOfUsersNeededToEarnPoints = "min_number_of_users_needed_to_earn_points";
 

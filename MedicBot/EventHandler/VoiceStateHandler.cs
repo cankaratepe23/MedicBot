@@ -120,7 +120,7 @@ public static class VoiceStateHandler
         }
 
         voiceStateInfo.FinishTime = DateTime.UtcNow;
-        UserManager.AddScore(voiceStateInfo.User, voiceStateInfo.GetTimeSpentInVoice());
+        UserManager.AddPoints(voiceStateInfo.User, voiceStateInfo.GetTimeSpentInVoice());
         VoiceStateTrackers[channelId].Remove(eventUser.Id);
     }
 
@@ -136,7 +136,7 @@ public static class VoiceStateHandler
         foreach (var (_, voiceStateInfo) in VoiceStateTrackers[channelId])
         {
             voiceStateInfo.FinishTime = DateTime.UtcNow;
-            UserManager.AddScore(voiceStateInfo.User, voiceStateInfo.GetTimeSpentInVoice());
+            UserManager.AddPoints(voiceStateInfo.User, voiceStateInfo.GetTimeSpentInVoice());
         }
 
         VoiceStateTrackers[channelId].Clear();

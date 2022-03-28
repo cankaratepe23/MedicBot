@@ -1,17 +1,19 @@
 ﻿using DSharpPlus.Entities;
+using MedicBot.Repository;
 using Serilog;
 
 namespace MedicBot.Manager;
 
 public static class UserManager
 {
-    public static void AddScore(DiscordUser member, double score)
+    public static void AddPoints(DiscordUser member, int score)
     {
+        UserPointsRepository.AddPoints(member.Id, score);
         Log.Debug("Added {Points} points to {Member}", score, member);
     }
 
-    public static void AddScore(DiscordUser member, TimeSpan time)
+    public static void AddPoints(DiscordUser member, TimeSpan time)
     {
-        AddScore(member, time.TotalSeconds);
+        AddPoints(member, (int) Math.Floor(time.TotalSeconds));
     }
 }
