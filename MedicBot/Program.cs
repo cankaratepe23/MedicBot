@@ -1,6 +1,5 @@
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
-using DSharpPlus.EventArgs;
 using DSharpPlus.Lavalink;
 using LiteDB;
 using MedicBot.Commands;
@@ -49,7 +48,7 @@ internal static class Program
         app.MapControllers();
 
         #endregion
-        
+
         #region Logger Config
 
         var loggerConfiguration = new LoggerConfiguration()
@@ -105,7 +104,10 @@ internal static class Program
         // Ensure tracks folder exists
         var audioTracksPath = Path.Combine(Environment.CurrentDirectory, Constants.AudioTracksPath);
         if (!Directory.Exists(audioTracksPath))
+        {
             Directory.CreateDirectory(audioTracksPath);
+        }
+
         AudioManager.Init(discord, audioTracksPath);
         VoiceStateHandler.Init(discord);
 
@@ -151,7 +153,10 @@ internal static class Program
 
     public static async Task Cleanup()
     {
-        if (_client == null) return;
+        if (_client == null)
+        {
+            return;
+        }
 
         VoiceStateHandler.ReloadTracking();
         await _client.GetLavalink().GetNodeConnection(Constants.LavalinkEndpoint).StopAsync();

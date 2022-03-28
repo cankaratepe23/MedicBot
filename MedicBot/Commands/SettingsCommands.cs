@@ -28,11 +28,15 @@ public class SettingsCommands : BaseCommandModule
     {
         var botSetting = SettingsRepository.Get(key);
         if (botSetting != null)
+        {
             await ctx.RespondAsync($"Setting {key} has value: {botSetting.Value}");
+        }
         else
+        {
             await ctx.RespondAsync($"Setting {key} does not exist.");
+        }
     }
-    
+
     [Command("get")]
     public async Task SettingGetCommand(CommandContext ctx)
     {

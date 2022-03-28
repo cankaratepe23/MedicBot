@@ -68,7 +68,11 @@ public static class AudioManager
             Log.Warning("A non-owner or non-admin user {UserId} attempted deleting the following track: {@AudioTrack}",
                 userId, audioTrack);
             var user = await Client.GetUserAsync(userId);
-            if (user != null) Log.Warning("Offending user of the unauthorized delete operation: {User}", user);
+            if (user != null)
+            {
+                Log.Warning("Offending user of the unauthorized delete operation: {User}", user);
+            }
+
             throw new UnauthorizedException("You need to be the owner of this audio track to delete it.");
         }
 
@@ -86,7 +90,11 @@ public static class AudioManager
     private static DiscordGuild FindGuild(ulong guildId)
     {
         var guildExists = Client.Guilds.TryGetValue(guildId, out var guild);
-        if (guildExists && guild != null) return guild;
+        if (guildExists && guild != null)
+        {
+            return guild;
+        }
+
         Log.Warning("Guild with ID: {Id} not found", guildId);
         throw new Exception($"Guild with ID: {guildId} not found");
     }

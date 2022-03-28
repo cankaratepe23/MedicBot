@@ -22,7 +22,7 @@ public static class SettingsRepository
         using var db = new LiteDatabase(Constants.LiteDatabasePath);
         return db.GetCollection<BotSetting>().FindOne(s => s.Key == key);
     }
-    
+
     public static T? GetValue<T>(string key)
     {
         var botSetting = Get(key);
@@ -44,6 +44,7 @@ public static class SettingsRepository
         {
             value = Convert.ToInt32(value);
         }
+
         if (botSetting == null)
         {
             botSetting = new BotSetting(key, value);
@@ -52,13 +53,14 @@ public static class SettingsRepository
         {
             botSetting.Value = value;
         }
+
         db.GetCollection<BotSetting>().Upsert(botSetting);
         if (Constants.ObservedSettingKeys.Contains(key))
         {
             BotSettingHandler.BotSettingChangedHandler(key);
         }
     }
-    
+
     public static void Init(string key, object value)
     {
         using var db = new LiteDatabase(Constants.LiteDatabasePath);
@@ -67,10 +69,12 @@ public static class SettingsRepository
         {
             value = Convert.ToInt32(value);
         }
+
         if (botSetting != null)
         {
             return;
         }
+
         db.GetCollection<BotSetting>().Insert(new BotSetting(key, value));
     }
 

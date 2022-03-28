@@ -1,5 +1,4 @@
-using DSharpPlus;
-using DSharpPlus.CommandsNext;
+﻿using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using MedicBot.Exceptions;
@@ -41,7 +40,10 @@ public static class Extensions
                 "The message you sent has no attachment. This command requires an attachment.");
         }
 
-        if (message.Attachments.Count > 1) Log.Information("Ignoring multiple attachments sent to add command");
+        if (message.Attachments.Count > 1)
+        {
+            Log.Information("Ignoring multiple attachments sent to add command");
+        }
 
         return message.Attachments[0];
     }
