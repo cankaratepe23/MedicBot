@@ -60,7 +60,8 @@ public class AudioController : ControllerBase
     {
         try
         {
-            await AudioManager.PlayAsync(audioNameOrId, guildId, searchById);
+            // TODO: Change null to the discord member when Authentication is implemented
+            await AudioManager.PlayAsync(audioNameOrId, guildId, null, searchById);
         }
         catch (AudioTrackNotFoundException e)
         {

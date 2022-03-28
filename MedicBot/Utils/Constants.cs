@@ -1,4 +1,4 @@
-using DSharpPlus.Net;
+﻿using DSharpPlus.Net;
 
 namespace MedicBot.Utils;
 
@@ -13,6 +13,8 @@ public static class Constants
     private const string LavalinkHost = "127.0.0.1";
     private const int LavalinkPort = 3332;
     public const string BotTokenEnvironmentVariableName = "Bot_Token_Dev";
+    public const string OAuthClientIdEnvironmentVariableName = "MedicBot_OAuth_ClientID";
+    public const string OAuthClientSecretEnvironmentVariableName = "MedicBot_OAuth_ClientSecret";
     public const string LiteDatabasePath = @"Filename=medicbot_store.db;connection=shared";
 
     public const string ThumbsUpUnicode = "👍";

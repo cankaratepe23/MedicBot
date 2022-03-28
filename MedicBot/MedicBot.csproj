@@ -8,6 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="AspNet.Security.OAuth.Discord" Version="6.0.5"/>
         <PackageReference Include="DSharpPlus" Version="4.2.0-nightly-01099"/>
         <PackageReference Include="DSharpPlus.CommandsNext" Version="4.2.0-nightly-01099"/>
         <PackageReference Include="DSharpPlus.Interactivity" Version="4.2.0-nightly-01099"/>

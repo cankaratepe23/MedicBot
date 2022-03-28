@@ -31,6 +31,14 @@ internal static class Program
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
+        builder.Services.AddAuthentication().AddDiscord(options =>
+        {
+            options.ClientId = Environment.GetEnvironmentVariable(Constants.OAuthClientIdEnvironmentVariableName) ??
+                               throw new InvalidOperationException();
+            options.ClientSecret =
+                Environment.GetEnvironmentVariable(Constants.OAuthClientSecretEnvironmentVariableName) ??
+                throw new InvalidOperationException();
+        });
 
         var app = builder.Build();
 

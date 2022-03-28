@@ -177,7 +177,7 @@ public static class AudioManager
 
     #region Play
 
-    public static async Task PlayAsync(AudioTrack audioTrack, DiscordGuild guild)
+    public static async Task PlayAsync(AudioTrack audioTrack, DiscordGuild guild, DiscordMember member)
     {
         var lava = Client.GetLavalink();
 
@@ -217,7 +217,8 @@ public static class AudioManager
         // TODO Add green circle (voice state update) during playback.
     }
 
-    public static async Task PlayAsync(string audioName, DiscordGuild guild, bool searchById = false)
+    public static async Task PlayAsync(string audioName, DiscordGuild guild, DiscordMember member,
+        bool searchById = false)
     {
         var audioTrack = searchById
             ? AudioRepository.FindById(audioName)
@@ -229,13 +230,14 @@ public static class AudioManager
                 $"No track was found with {(searchById ? "ID" : "name")}: {audioName}");
         }
 
-        await PlayAsync(audioTrack, guild);
+        await PlayAsync(audioTrack, guild, member);
     }
 
-    public static async Task PlayAsync(string audioNameOrId, ulong guildId, bool searchById = false)
+    public static async Task PlayAsync(string audioNameOrId, ulong guildId, DiscordMember member,
+        bool searchById = false)
     {
         var guild = Client.FindGuild(guildId);
-        await PlayAsync(audioNameOrId, guild, searchById);
+        await PlayAsync(audioNameOrId, guild, member, searchById);
     }
 
     #endregion
