@@ -52,6 +52,7 @@ public static class Extensions
     ///     Finds a guild with the given guildId. Wraps Client.Guilds.TryGetValue() with logging and exception
     ///     that will be thrown if the guild cannot be found.
     /// </summary>
+    /// <param name="client">The discord client to use.</param>
     /// <param name="guildId">The guild ID to search for.</param>
     /// <returns>The Guild object with the given ID.</returns>
     /// <exception cref="Exception">Exception with user-friendly message stating the guild cannot be found.</exception>
