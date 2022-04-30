@@ -1,6 +1,8 @@
 ﻿using System.Security.Claims;
 using MedicBot.Exceptions;
 using MedicBot.Manager;
+using MedicBot.Repository;
+using MedicBot.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
@@ -75,5 +77,18 @@ public class AudioController : ControllerBase
         }
 
         return Ok();
+    }
+
+    [HttpGet("Get")]
+    public IActionResult Get()
+    {
+        try
+        {
+            return Ok(AudioRepository.All().Select(t => t.ToDto()));
+        }
+        catch (Exception e)
+        {
+            return BadRequest(e.Message);
+        }
     }
 }

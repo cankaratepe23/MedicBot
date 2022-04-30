@@ -2,6 +2,7 @@
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using MedicBot.Exceptions;
+using MedicBot.Model;
 using Serilog;
 
 namespace MedicBot.Utils;
@@ -86,5 +87,13 @@ public static class Extensions
     public static bool IsDisconnectEvent(this VoiceStateUpdateEventArgs e)
     {
         return (e.After == null || e.After.Channel == null) && e.Before != null && e.Before.Channel != null;
+    }
+
+    public static AudioTrackDto ToDto(this AudioTrack audioTrack)
+    {
+        return new AudioTrackDto
+        {
+            Id = audioTrack.Id.ToString(), Name = audioTrack.Name, Aliases = audioTrack.Aliases, Tags = audioTrack.Tags
+        };
     }
 }
