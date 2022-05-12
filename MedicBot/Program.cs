@@ -33,6 +33,16 @@ internal static class Program
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("MedicBotPolicy", policyBuilder =>
+            {
+                if (builder.Environment.IsDevelopment())
+                {
+                    policyBuilder.WithOrigins("http://localhost:3000");
+                }
+            });
+        });
         var clientId = Environment.GetEnvironmentVariable(Constants.OAuthClientIdEnvironmentVariableName);
         var clientSecret = Environment.GetEnvironmentVariable(Constants.OAuthClientSecretEnvironmentVariableName);
         if (clientId == null || clientSecret == null)
@@ -61,6 +71,8 @@ internal static class Program
         }
 
         app.UseHttpsRedirection();
+
+        app.UseCors("MedicBotPolicy");
 
         app.UseAuthentication();
 
