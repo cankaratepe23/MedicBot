@@ -14,6 +14,7 @@ public static class SettingsRepository
         using var db = new LiteDatabase(Constants.LiteDatabasePath);
         db.GetCollection<BotSetting>();
         Init(Constants.MinNumberOfUsersNeededToEarnPoints, 2);
+        Init(Constants.DefaultScore, 10);
         Log.Information(Constants.DbCollectionInitializedBotSettings);
     }
 

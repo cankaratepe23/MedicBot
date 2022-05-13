@@ -1,9 +1,12 @@
 ﻿using LiteDB;
+using MedicBot.Repository;
+using MedicBot.Utils;
 
 namespace MedicBot.Model;
 
 public class AudioTrack
 {
+    private int _price;
 #pragma warning disable CS8618
     public AudioTrack()
 #pragma warning restore CS8618
@@ -11,11 +14,11 @@ public class AudioTrack
     }
 
     public AudioTrack(string name, string path, ulong ownerId) : this(name, new List<string>(), new List<string>(),
-        path, ownerId)
+        path, ownerId, 10)
     {
     }
 
-    public AudioTrack(string name, List<string> aliases, List<string> tags, string path, ulong ownerId)
+    public AudioTrack(string name, List<string> aliases, List<string> tags, string path, ulong ownerId, int price = -1)
     {
         Id = new ObjectId();
         Name = name;
@@ -23,6 +26,7 @@ public class AudioTrack
         Tags = tags;
         Path = path;
         OwnerId = ownerId;
+        Price = price;
     }
 
     public ObjectId Id { get; set; }
@@ -31,4 +35,15 @@ public class AudioTrack
     public List<string> Tags { get; set; }
     public string Path { get; set; }
     public ulong OwnerId { get; set; }
+
+    public int Price
+    {
+        get => _price < 0 ? SettingsRepository.GetValue<int>(Constants.DefaultScore) : _price;
+        set => _price = value;
+    }
+
+    public override string ToString()
+    {
+        return Name + (Tags.Count != 0 ? " (" + Tags.FirstOrDefault() + ")" : "");
+    }
 }

@@ -179,6 +179,12 @@ public static class AudioManager
 
     public static async Task PlayAsync(AudioTrack audioTrack, DiscordGuild guild, DiscordMember member)
     {
+        if (!UserManager.CanPlayAudio(member, audioTrack))
+        {
+            Log.Warning("{Member} can not play the audio {AudioTrack}", member, audioTrack);
+            throw new UnauthorizedException($"{member} can not play the audio {audioTrack}");
+        }
+
         var lava = Client.GetLavalink();
 
         var connection = lava.GetGuildConnection(guild);
