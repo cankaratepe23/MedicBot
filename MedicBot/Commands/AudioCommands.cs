@@ -127,7 +127,7 @@ public class AudioCommands : BaseCommandModule
     {
         try
         {
-            var matchingTracks = (await AudioManager.FindAsync(audioName)).Select(t => t.Name);
+            var matchingTracks = AudioManager.FindAsync(audioName).Select(t => t.Name);
             await ctx.RespondAsync(string.Join(";", matchingTracks));
         }
         catch (Exception e)

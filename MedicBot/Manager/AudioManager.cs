@@ -80,7 +80,7 @@ public static class AudioManager
         File.Delete(audioTrack.Path);
     }
 
-    public static async Task<IEnumerable<AudioTrack>> FindAsync(string searchQuery)
+    public static IEnumerable<AudioTrack> FindAsync(string searchQuery)
     {
         // TODO Allow searching by ID with a special prefix or something
         return AudioRepository.FindAllByName(searchQuery);

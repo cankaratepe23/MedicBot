@@ -83,6 +83,7 @@ public class AudioRepository
         using var db = new LiteDatabase(Constants.LiteDatabasePath);
         return db.GetCollection<AudioTrack>()
             .Find(t => t.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+        // TODO Ignore case is probably not needed because of the DSharpPlus Custom command processor
     }
 
     public static IEnumerable<AudioTrack> All()
