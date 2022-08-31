@@ -78,6 +78,13 @@ public class AudioRepository
         return closestMatch;
     }
 
+    public static IEnumerable<AudioTrack> FindAllByName(string searchTerm)
+    {
+        using var db = new LiteDatabase(Constants.LiteDatabasePath);
+        return db.GetCollection<AudioTrack>()
+            .Find(t => t.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+    }
+
     public static IEnumerable<AudioTrack> All()
     {
         using var db = new LiteDatabase(Constants.LiteDatabasePath);

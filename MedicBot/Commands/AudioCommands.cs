@@ -121,4 +121,19 @@ public class AudioCommands : BaseCommandModule
             await ctx.RespondAsync($"Lavalink failed to load the track with error: {e.Message}");
         }
     }
+
+    [Command("list")]
+    public async Task ListCommand(CommandContext ctx, [RemainingText] string audioName)
+    {
+        try
+        {
+            var matchingTracks = (await AudioManager.FindAsync(audioName)).Select(t => t.Name);
+            await ctx.RespondAsync(string.Join(";", matchingTracks));
+        }
+        catch (Exception e)
+        {
+            await ctx.RespondAsync(e.Message);
+            throw;
+        }
+    }
 }
