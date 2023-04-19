@@ -18,7 +18,7 @@ internal static class Program
     private static readonly CancellationTokenSource CancellationTokenSource = new();
     private static DiscordClient? _client;
 
-    private static void Main(string[] args)
+    private static void Main()
     {
         ConfigureAsync().GetAwaiter().GetResult();
     }
@@ -164,7 +164,7 @@ internal static class Program
             Environment.Exit(0);
         });
         discord.VoiceStateUpdated += VoiceStateHandler.DiscordOnVoiceStateUpdated;
-        discord.GuildDownloadCompleted += (sender, args) =>
+        discord.GuildDownloadCompleted += (_, _) =>
         {
             VoiceStateHandler.StartTracking();
             return Task.CompletedTask;

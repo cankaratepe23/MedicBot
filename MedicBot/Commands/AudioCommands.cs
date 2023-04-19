@@ -57,7 +57,7 @@ public class AudioCommands : BaseCommandModule
     {
         try
         {
-            await AudioManager.AddAsync(audioName, ctx.Member.Id, ctx.Message.GetFirstAttachment().Url);
+            await AudioManager.AddAsync(audioName, ctx.Message.Author.Id, ctx.Message.GetFirstAttachment().Url);
         }
         catch (Exception e)
         {
@@ -76,7 +76,7 @@ public class AudioCommands : BaseCommandModule
     {
         try
         {
-            await AudioManager.AddAsync(audioName, ctx.Member.Id, message.GetFirstAttachment().Url);
+            await AudioManager.AddAsync(audioName, ctx.Message.Author.Id, message.GetFirstAttachment().Url);
         }
         catch (Exception e)
         {
@@ -110,6 +110,12 @@ public class AudioCommands : BaseCommandModule
     {
         try
         {
+            if (ctx.Member is null)
+            {
+                // TODO Support DMs for commands
+                await ctx.RespondAsync("Direct messages are not supported yet");
+                return;
+            }
             await AudioManager.PlayAsync(audioName, ctx.Guild, ctx.Member);
         }
         catch (AudioTrackNotFoundException e)

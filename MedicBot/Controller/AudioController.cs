@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Security.Authentication;
+using System.Security.Claims;
 using MedicBot.Exceptions;
 using MedicBot.Manager;
 using MedicBot.Repository;
@@ -64,8 +65,13 @@ public class AudioController : ControllerBase
     public async Task<IActionResult> Play(ulong guildId, [FromQuery] string audioNameOrId,
         [FromQuery] bool searchById = false)
     {
-        Log.Debug("User's ID is: {UserId}",
-            HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value);
+        var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+        if (userClaim is null)
+        {
+            throw new InvalidCredentialException();
+        }
+
+        Log.Debug("User's ID is: {UserId}", userClaim.Value);
         try
         {
             // TODO: Change null to the discord member when Authentication is implemented
