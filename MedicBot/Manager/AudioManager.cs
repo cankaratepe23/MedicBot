@@ -85,7 +85,7 @@ public static class AudioManager
         // TODO Allow searching by ID with a special prefix or something
         return AudioRepository.FindAllByName(searchQuery);
     }
-    
+
     // TODO Add summary docs for everything
 
     #region Join

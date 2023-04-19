@@ -1,5 +1,6 @@
 ﻿using Fastenshtein;
 using LiteDB;
+using MedicBot.Manager;
 using MedicBot.Model;
 using MedicBot.Utils;
 using Serilog;
@@ -12,29 +13,25 @@ public class AudioRepository
     static AudioRepository()
     {
         // Ensure db and collection is created.
-        using var db = new LiteDatabase(Constants.LiteDatabasePath);
-        var collection = db.GetCollection<AudioTrack>();
+        var collection = LiteDbManager.Database.GetCollection<AudioTrack>();
         collection.EnsureIndex(a => a.Name);
         Log.Information(Constants.DbCollectionInitializedAudioTracks);
     }
 
     public static AudioTrack? FindById(string id)
     {
-        using var db = new LiteDatabase(Constants.LiteDatabasePath);
-        return db.GetCollection<AudioTrack>().FindById(new ObjectId(id));
+        return LiteDbManager.Database.GetCollection<AudioTrack>().FindById(new ObjectId(id));
     }
 
     public static bool NameExists(string name)
     {
-        using var db = new LiteDatabase(Constants.LiteDatabasePath);
-        return db.GetCollection<AudioTrack>()
+        return LiteDbManager.Database.GetCollection<AudioTrack>()
             .Exists(a => a.Name == name);
     }
 
     public static AudioTrack? FindByNameExact(string name)
     {
-        using var db = new LiteDatabase(Constants.LiteDatabasePath);
-        return db.GetCollection<AudioTrack>()
+        return LiteDbManager.Database.GetCollection<AudioTrack>()
             .FindOne(a => a.Name == name);
     }
 
@@ -54,7 +51,6 @@ public class AudioRepository
 
         // Lucene n-gram or fuzzy search (Has character limitations)
         // Elastic???
-        using var db = new LiteDatabase(Constants.LiteDatabasePath);
         var lev = new Levenshtein(searchTerm);
         var minDistance = int.MaxValue;
         AudioTrack? closestMatch = null;
@@ -80,45 +76,39 @@ public class AudioRepository
 
     public static IEnumerable<AudioTrack> FindAllByName(string searchTerm)
     {
-        using var db = new LiteDatabase(Constants.LiteDatabasePath);
-        return db.GetCollection<AudioTrack>()
+        return LiteDbManager.Database.GetCollection<AudioTrack>()
             .Find(t => t.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
         // TODO Ignore case is probably not needed because of the DSharpPlus Custom command processor
     }
 
     public static IEnumerable<AudioTrack> All()
     {
-        using var db = new LiteDatabase(Constants.LiteDatabasePath);
-        return db.GetCollection<AudioTrack>().FindAll();
+        return LiteDbManager.Database.GetCollection<AudioTrack>().FindAll();
     }
 
     public static List<AudioTrack> FindAllWithTag(string tag)
     {
-        using var db = new LiteDatabase(Constants.LiteDatabasePath);
-        return db.GetCollection<AudioTrack>().Find(t => t.Tags.Contains(tag)).ToList();
+        return LiteDbManager.Database.GetCollection<AudioTrack>().Find(t => t.Tags.Contains(tag)).ToList();
     }
 
     public static List<AudioTrack> FindAllWithAllTags(List<string> tags)
     {
-        using var db = new LiteDatabase(Constants.LiteDatabasePath);
-        return db.GetCollection<AudioTrack>().Find(track => tags.All(tag => track.Tags.Contains(tag))).ToList();
+        return LiteDbManager.Database.GetCollection<AudioTrack>()
+            .Find(track => tags.All(tag => track.Tags.Contains(tag))).ToList();
     }
 
     public static void Add(AudioTrack audioTrack)
     {
-        using var db = new LiteDatabase(Constants.LiteDatabasePath);
-        db.GetCollection<AudioTrack>().Insert(audioTrack);
+        LiteDbManager.Database.GetCollection<AudioTrack>().Insert(audioTrack);
     }
 
     public static bool Update(AudioTrack audioTrack)
     {
-        using var db = new LiteDatabase(Constants.LiteDatabasePath);
-        return db.GetCollection<AudioTrack>().Update(audioTrack);
+        return LiteDbManager.Database.GetCollection<AudioTrack>().Update(audioTrack);
     }
 
     public static void Delete(ObjectId id)
     {
-        using var db = new LiteDatabase(Constants.LiteDatabasePath);
-        db.GetCollection<AudioTrack>().Delete(id);
+        LiteDbManager.Database.GetCollection<AudioTrack>().Delete(id);
     }
 }

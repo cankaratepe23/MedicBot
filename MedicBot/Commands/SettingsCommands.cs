@@ -12,6 +12,12 @@ public class SettingsCommands : BaseCommandModule
     [Command("set")]
     public async Task SettingSetCommand(CommandContext ctx, string key, [RemainingText] string value)
     {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            await ctx.RespondAsync("You need to enter a value for the setting.");
+            return;
+        }
+
         SettingsRepository.Set(key, value);
         await ctx.Message.RespondThumbsUpAsync();
     }
@@ -44,7 +50,9 @@ public class SettingsCommands : BaseCommandModule
         var builder = new DiscordEmbedBuilder().WithTitle("MedicBot Settings");
         foreach (var botSetting in allSettings)
         {
-            builder.AddField(botSetting.Key, botSetting.Value.ToString());
+            var settingValue = botSetting.Value?.ToString();
+            settingValue ??= "**null**";
+            builder.AddField(botSetting.Key, settingValue);
         }
 
         await ctx.RespondAsync(builder);

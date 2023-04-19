@@ -1,4 +1,4 @@
-﻿using LiteDB;
+﻿using MedicBot.Manager;
 using MedicBot.Model;
 using MedicBot.Utils;
 using Serilog;
@@ -10,26 +10,22 @@ public static class UserPointsRepository
     static UserPointsRepository()
     {
         // Ensure db and collection is created.
-        using var db = new LiteDatabase(Constants.LiteDatabasePath);
-        db.GetCollection<UserPoints>();
+        LiteDbManager.Database.GetCollection<UserPoints>();
         Log.Information(Constants.DbCollectionInitializedUserPoints);
     }
 
     public static UserPoints? Get(ulong userId)
     {
-        using var db = new LiteDatabase(Constants.LiteDatabasePath);
-        return db.GetCollection<UserPoints>().FindOne(p => p.Id == userId);
+        return LiteDbManager.Database.GetCollection<UserPoints>().FindOne(p => p.Id == userId);
     }
 
     public static int GetPoints(ulong userId)
     {
-        using var db = new LiteDatabase(Constants.LiteDatabasePath);
-        return db.GetCollection<UserPoints>().FindOne(p => p.Id == userId).Score;
+        return LiteDbManager.Database.GetCollection<UserPoints>().FindOne(p => p.Id == userId).Score;
     }
 
     public static void AddPoints(ulong userId, int score)
     {
-        using var db = new LiteDatabase(Constants.LiteDatabasePath);
         var currentPoints = Get(userId);
 
         if (currentPoints == null)
@@ -41,6 +37,6 @@ public static class UserPointsRepository
             currentPoints.Score += score;
         }
 
-        db.GetCollection<UserPoints>().Upsert(currentPoints);
+        LiteDbManager.Database.GetCollection<UserPoints>().Upsert(currentPoints);
     }
 }

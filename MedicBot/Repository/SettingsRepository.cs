@@ -1,5 +1,5 @@
-﻿using LiteDB;
-using MedicBot.EventHandler;
+﻿using MedicBot.EventHandler;
+using MedicBot.Manager;
 using MedicBot.Model;
 using MedicBot.Utils;
 using Serilog;
@@ -11,8 +11,7 @@ public static class SettingsRepository
     static SettingsRepository()
     {
         // Ensure db and collection is created.
-        using var db = new LiteDatabase(Constants.LiteDatabasePath);
-        db.GetCollection<BotSetting>();
+        LiteDbManager.Database.GetCollection<BotSetting>();
         Init(Constants.MinNumberOfUsersNeededToEarnPoints, 2);
         Init(Constants.DefaultScore, 10);
         Log.Information(Constants.DbCollectionInitializedBotSettings);
@@ -20,8 +19,7 @@ public static class SettingsRepository
 
     public static BotSetting? Get(string key)
     {
-        using var db = new LiteDatabase(Constants.LiteDatabasePath);
-        return db.GetCollection<BotSetting>().FindOne(s => s.Key == key);
+        return LiteDbManager.Database.GetCollection<BotSetting>().FindOne(s => s.Key == key);
     }
 
     public static T? GetValue<T>(string key)
@@ -33,13 +31,11 @@ public static class SettingsRepository
 
     public static IEnumerable<BotSetting> All()
     {
-        using var db = new LiteDatabase(Constants.LiteDatabasePath);
-        return db.GetCollection<BotSetting>().FindAll();
+        return LiteDbManager.Database.GetCollection<BotSetting>().FindAll();
     }
 
     public static void Set(string key, object value)
     {
-        using var db = new LiteDatabase(Constants.LiteDatabasePath);
         var botSetting = Get(key);
         if (Constants.IntegerSettingKeys.Contains(key))
         {
@@ -55,7 +51,7 @@ public static class SettingsRepository
             botSetting.Value = value;
         }
 
-        db.GetCollection<BotSetting>().Upsert(botSetting);
+        LiteDbManager.Database.GetCollection<BotSetting>().Upsert(botSetting);
         if (Constants.ObservedSettingKeys.Contains(key))
         {
             BotSettingHandler.BotSettingChangedHandler(key);
@@ -64,7 +60,6 @@ public static class SettingsRepository
 
     public static void Init(string key, object value)
     {
-        using var db = new LiteDatabase(Constants.LiteDatabasePath);
         var botSetting = Get(key);
         if (Constants.IntegerSettingKeys.Contains(key))
         {
@@ -76,12 +71,11 @@ public static class SettingsRepository
             return;
         }
 
-        db.GetCollection<BotSetting>().Insert(new BotSetting(key, value));
+        LiteDbManager.Database.GetCollection<BotSetting>().Insert(new BotSetting(key, value));
     }
 
     public static void Delete(string key)
     {
-        using var db = new LiteDatabase(Constants.LiteDatabasePath);
-        db.GetCollection<BotSetting>().DeleteMany(s => s.Key == key);
+        LiteDbManager.Database.GetCollection<BotSetting>().DeleteMany(s => s.Key == key);
     }
 }

@@ -14,7 +14,7 @@ public class BotSetting
         Value = value;
     }
 
-    public ObjectId Id { get; set; }
-    public string Key { get; set; }
-    public object Value { get; set; }
+    public ObjectId? Id { get; set; }
+    public string? Key { get; set; }
+    public object? Value { get; set; }
 }

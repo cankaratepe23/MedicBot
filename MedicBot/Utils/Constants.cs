@@ -15,7 +15,7 @@ public static class Constants
     public const string BotTokenEnvironmentVariableName = "Bot_Token_Dev";
     public const string OAuthClientIdEnvironmentVariableName = "MedicBot_OAuth_ClientID";
     public const string OAuthClientSecretEnvironmentVariableName = "MedicBot_OAuth_ClientSecret";
-    public const string LiteDatabasePath = @"Filename=medicbot_store.db;connection=shared";
+    public const string LiteDatabasePath = @"Filename=medicbot_store.db";
 
     public const string ThumbsUpUnicode = "👍";
 
