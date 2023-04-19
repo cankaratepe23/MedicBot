@@ -2,26 +2,27 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net6.0</TargetFramework>
+        <TargetFramework>net7.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <LangVersion>11</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="AspNet.Security.OAuth.Discord" Version="6.0.5"/>
-        <PackageReference Include="DSharpPlus" Version="4.3.0-nightly-01125"/>
-        <PackageReference Include="DSharpPlus.CommandsNext" Version="4.3.0-nightly-01125"/>
-        <PackageReference Include="DSharpPlus.Interactivity" Version="4.3.0-nightly-01125"/>
-        <PackageReference Include="DSharpPlus.Lavalink" Version="4.3.0-nightly-01125"/>
-        <PackageReference Include="DSharpPlus.SlashCommands" Version="4.3.0-nightly-01125"/>
-        <PackageReference Include="Fastenshtein" Version="1.0.0.8"/>
-        <PackageReference Include="LiteDB" Version="5.0.11"/>
-        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.3"/>
-        <PackageReference Include="Serilog" Version="2.10.0"/>
-        <PackageReference Include="Serilog.Extensions.Logging" Version="3.1.0"/>
-        <PackageReference Include="Serilog.Sinks.Console" Version="4.0.1"/>
-        <PackageReference Include="Serilog.Sinks.File" Version="5.0.0"/>
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3"/>
+        <PackageReference Include="AspNet.Security.OAuth.Discord" Version="7.0.2" />
+        <PackageReference Include="DSharpPlus" Version="4.4.0" />
+        <PackageReference Include="DSharpPlus.CommandsNext" Version="4.4.0" />
+        <PackageReference Include="DSharpPlus.Interactivity" Version="4.4.0" />
+        <PackageReference Include="DSharpPlus.Lavalink" Version="4.4.0" />
+        <PackageReference Include="DSharpPlus.SlashCommands" Version="4.4.0" />
+        <PackageReference Include="Fastenshtein" Version="1.0.0.8" />
+        <PackageReference Include="LiteDB" Version="5.0.16" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="7.0.5" />
+        <PackageReference Include="Serilog" Version="2.12.0" />
+        <PackageReference Include="Serilog.Extensions.Logging" Version="3.1.0" />
+        <PackageReference Include="Serilog.Sinks.Console" Version="4.1.0" />
+        <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
     </ItemGroup>
 
 </Project>

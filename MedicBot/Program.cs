@@ -125,7 +125,8 @@ internal static class Program
         var discord = new DiscordClient(new DiscordConfiguration
         {
             Token = Environment.GetEnvironmentVariable(Constants.BotTokenEnvironmentVariableName),
-            LoggerFactory = logFactory
+            LoggerFactory = logFactory,
+            Intents = DiscordIntents.All
         });
         _client = discord;
         var lavalink = discord.UseLavalink();
