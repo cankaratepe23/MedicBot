@@ -7,8 +7,10 @@ using MedicBot.Commands;
 using MedicBot.EventHandler;
 using MedicBot.Manager;
 using MedicBot.Model;
+using MedicBot.Repository;
 using MedicBot.Utils;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using MongoDB.Driver;
 using Serilog;
 
 namespace MedicBot;
@@ -60,6 +62,16 @@ internal static class Program
                 options.ClientId = clientId;
                 options.ClientSecret = clientSecret;
             });
+
+        var mongoDbSettings = builder.Configuration.GetSection("MongoDb").Get<MongoDbSettings>();
+        if (mongoDbSettings?.ConnectionString is null)
+        {
+            Log.Error("Failed to read MongoDB configuration from appsettings.json");
+            return;
+        }
+        var mongoClientSettings = MongoClientSettings.FromConnectionString(mongoDbSettings.ConnectionString);
+        var mongoClient = new MongoClient(mongoClientSettings);
+        builder.Services.AddSingleton(mongoClient.GetDatabase(mongoDbSettings.Database));
 
         var app = builder.Build();
 
@@ -148,7 +160,8 @@ internal static class Program
         // Commands Init
         var commands = discord.UseCommandsNext(new CommandsNextConfiguration
         {
-            StringPrefixes = Constants.BotPrefixes
+            StringPrefixes = Constants.BotPrefixes,
+            Services = app.Services
         });
         commands.RegisterCommands<BaseCommands>();
         commands.RegisterCommands<AudioCommands>();
