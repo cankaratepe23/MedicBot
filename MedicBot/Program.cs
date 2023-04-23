@@ -45,6 +45,7 @@ internal static class Program
                 }
             });
         });
+        builder.Configuration.AddEnvironmentVariables(prefix: "MedicBot_");
         var clientId = Environment.GetEnvironmentVariable(Constants.OAuthClientIdEnvironmentVariableName);
         var clientSecret = Environment.GetEnvironmentVariable(Constants.OAuthClientSecretEnvironmentVariableName);
         if (clientId == null || clientSecret == null)
