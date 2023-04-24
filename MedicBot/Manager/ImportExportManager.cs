@@ -32,7 +32,7 @@ public static class ImportExportManager
                 audioEntry.Name,
                 audioEntry.Aliases,
                 audioEntry.Collections,
-                Path.Combine(Constants.AudioTracksPath, audioEntry.FileName),
+                string.Join('/', Constants.AudioTracksPath, audioEntry.FileName),
                 audioEntry.OwnerId
             );
             Log.Verbose("Converted to audio track: {@AudioTrack}", audioTrack);

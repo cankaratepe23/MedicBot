@@ -147,7 +147,7 @@ internal static class Program
         #region Initializations
 
         // Ensure tracks folder exists
-        var audioTracksPath = Path.Combine(Environment.CurrentDirectory, Constants.AudioTracksPath);
+        var audioTracksPath = Constants.AudioTracksPath;
         if (!Directory.Exists(audioTracksPath))
         {
             Directory.CreateDirectory(audioTracksPath);

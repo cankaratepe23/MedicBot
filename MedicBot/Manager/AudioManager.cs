@@ -12,12 +12,12 @@ namespace MedicBot.Manager;
 public static class AudioManager
 {
     private static DiscordClient Client { get; set; } = null!;
-    private static string AudioTracksFullPath { get; set; } = null!;
+    private static string AudioTracksPath { get; set; } = null!;
 
-    public static void Init(DiscordClient client, string fullPath)
+    public static void Init(DiscordClient client, string tracksPath)
     {
         Client = client;
-        AudioTracksFullPath = fullPath;
+        AudioTracksPath = tracksPath;
     }
 
     public static async Task AddAsync(string audioName, ulong userId, string url)
@@ -43,7 +43,7 @@ public static class AudioManager
 
         var fileExtension = url[url.LastIndexOf('.')..];
         var fileName = audioName + fileExtension;
-        var filePath = Path.Combine(AudioTracksFullPath, fileName);
+        var filePath = string.Join('/', AudioTracksPath, fileName);
         {
             using var client = new HttpClient();
             await using var stream = await client.GetStreamAsync(url);
