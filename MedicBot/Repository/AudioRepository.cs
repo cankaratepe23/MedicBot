@@ -1,4 +1,4 @@
-using Fastenshtein;
+﻿using Fastenshtein;
 using MedicBot.Manager;
 using MedicBot.Model;
 using MedicBot.Utils;
@@ -102,8 +102,7 @@ public class AudioRepository
 
     public static IEnumerable<AudioTrack> FindAllByName(string searchTerm)
     {
-        return TracksCollection.Find(t => t.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToEnumerable();
-        // TODO Ignore case is probably not needed because of the DSharpPlus Custom command processor
+        return TracksCollection.Find(t => t.Name.Contains(searchTerm)).ToEnumerable();
     }
 
     public static IEnumerable<AudioTrack> All()
