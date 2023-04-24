@@ -87,6 +87,7 @@ public static class AudioManager
         {
             return AudioRepository.All(); // TODO Pagination and DM for large messages
         }
+
         return AudioRepository.FindAllByName(searchQuery);
     }
 
@@ -195,30 +196,7 @@ public static class AudioManager
             throw new UnauthorizedException($"{member} can not play the audio {audioTrack}");
         }
 
-        var lava = Client.GetLavalink();
-
-        var connection = lava.GetGuildConnection(guild);
-        if (connection == null)
-        {
-            Log.Information("Play was called when bot was not in a voice channel");
-            Log.Information("Trying to join a voice channel");
-            var channelToJoin = guild.Channels.VoiceChannelWithMostNonBotUsers();
-            if (channelToJoin == null)
-            {
-                Log.Warning("JoinGuildIdAsync() couldn't find the most crowded channel in {Guild}", guild);
-                throw new ChannelNotFoundException($"Couldn't find the most crowded channel in {guild}");
-            }
-
-            await JoinAsync(channelToJoin);
-            connection = lava.GetGuildConnection(guild);
-            if (connection == null)
-            {
-                Log.Error("Bot couldn't join the most crowded channel, but no exception was thrown");
-                throw new Exception("Fatal: Bot was not in a voice channel when play was called, " +
-                                    "and it couldn't join the most crowded channel either," +
-                                    "but it threw no exceptions when it was supposed to.");
-            }
-        }
+        var connection = await GetLavalinkConnection(guild);
 
         var audioFile = new FileInfo(audioTrack.Path);
         if (!audioFile.Exists)
@@ -226,6 +204,7 @@ public static class AudioManager
             Log.Warning("File {FilePath} does not exist, cannot play", audioFile.FullName);
             throw new FileNotFoundException($"File does not exist: {audioFile.FullName}");
         }
+
         var result = await connection.GetTracksAsync(audioFile);
         if (result.LoadResultType != LavalinkLoadResultType.TrackLoaded)
         {
@@ -235,12 +214,48 @@ public static class AudioManager
         }
 
         await connection.PlayAsync(result.Tracks.FirstOrDefault());
-        // TODO Add green circle (voice state update) during playback.
+    }
+
+    public static async Task PlayAsync(Uri audioUrl, DiscordGuild guild, DiscordMember member)
+    {
+        if (UserManager.IsMuted(member))
+        {
+            Log.Warning("{Member} can not play the audio {AudioUrl}", member, audioUrl);
+            throw new UnauthorizedException($"{member} can not play the audio {audioUrl}");
+        }
+
+        var connection = await GetLavalinkConnection(guild);
+
+        var result = await connection.GetTracksAsync(audioUrl);
+
+        if (result.LoadResultType != LavalinkLoadResultType.TrackLoaded)
+        {
+            Log.Warning("Lavalink failed to load the track from URL {Url} with failure type: {Type}", audioUrl,
+                result.LoadResultType);
+            if (result.Exception.Message == null)
+            {
+                throw new LavalinkLoadFailedException(result.LoadResultType.ToString());
+            }
+
+            Log.Warning("Exception: {ExceptionMessage}", result.Exception.Message);
+            throw new LavalinkLoadFailedException(result.Exception.Message);
+        }
+
+        await connection.PlayAsync(result.Tracks.FirstOrDefault());
     }
 
     public static async Task PlayAsync(string audioName, DiscordGuild guild, DiscordMember member,
         bool searchById = false)
     {
+        if (Uri.TryCreate(audioName, UriKind.Absolute, out var uriResult))
+        {
+            if (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps)
+            {
+                await PlayAsync(uriResult, guild, member);
+                return;
+            }
+        }
+
         var audioTrack = searchById
             ? AudioRepository.FindById(audioName)
             : AudioRepository.FindByName(audioName);
@@ -262,4 +277,36 @@ public static class AudioManager
     }
 
     #endregion
+
+    private static async Task<LavalinkGuildConnection> GetLavalinkConnection(DiscordGuild guild)
+    {
+        var lava = Client.GetLavalink();
+
+        var connection = lava.GetGuildConnection(guild);
+        if (connection != null)
+        {
+            return connection;
+        }
+
+        Log.Information("Play was called when bot was not in a voice channel");
+        Log.Information("Trying to join a voice channel");
+        var channelToJoin = guild.Channels.VoiceChannelWithMostNonBotUsers();
+        if (channelToJoin == null)
+        {
+            Log.Warning("JoinGuildIdAsync() couldn't find the most crowded channel in {Guild}", guild);
+            throw new ChannelNotFoundException($"Couldn't find the most crowded channel in {guild}");
+        }
+
+        await JoinAsync(channelToJoin);
+        connection = lava.GetGuildConnection(guild);
+        if (connection != null)
+        {
+            return connection;
+        }
+
+        Log.Error("Bot couldn't join the most crowded channel, but no exception was thrown");
+        throw new Exception("Fatal: Bot was not in a voice channel when play was called, " +
+                            "and it couldn't join the most crowded channel either," +
+                            "but it threw no exceptions when it was supposed to.");
+    }
 }
