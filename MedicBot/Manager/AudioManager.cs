@@ -221,6 +221,11 @@ public static class AudioManager
         }
 
         var audioFile = new FileInfo(audioTrack.Path);
+        if (!audioFile.Exists)
+        {
+            Log.Warning("File {FilePath} does not exist, cannot play", audioFile.FullName);
+            throw new FileNotFoundException($"File does not exist: {audioFile.FullName}");
+        }
         var result = await connection.GetTracksAsync(audioFile);
         if (result.LoadResultType != LavalinkLoadResultType.TrackLoaded)
         {
