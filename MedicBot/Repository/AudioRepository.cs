@@ -1,9 +1,10 @@
-﻿using Fastenshtein;
+using Fastenshtein;
 using MedicBot.Manager;
 using MedicBot.Model;
 using MedicBot.Utils;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using MongoDB.Driver.Search;
 using Serilog;
 
 namespace MedicBot.Repository;
@@ -53,6 +54,29 @@ public class AudioRepository
 
         // Lucene n-gram or fuzzy search (Has character limitations)
         // Elastic???
+        return FindAtlas(searchTerm);
+    }
+
+    private static AudioTrack? FindAtlas(string searchTerm)
+    {
+        var result = TracksCollection.Aggregate()
+            .Search(
+                Builders<AudioTrack>.Search.Compound()
+                    .Should(Builders<AudioTrack>.Search.Autocomplete(
+                        a => a.Name,
+                        searchTerm,
+                        fuzzy: new SearchFuzzyOptions() {MaxEdits = 1},
+                        score: Builders<AudioTrack>.SearchScore.Boost(3)))
+                    .Should(Builders<AudioTrack>.Search.Text(
+                        a => a.Name,
+                        searchTerm,
+                        fuzzy: new SearchFuzzyOptions() {MaxEdits = 1}))
+            ).FirstOrDefault();
+        return result;
+    }
+
+    private static AudioTrack? FindLevenshtein(string searchTerm)
+    {
         var lev = new Levenshtein(searchTerm);
         var minDistance = int.MaxValue;
         AudioTrack? closestMatch = null;
