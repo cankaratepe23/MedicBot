@@ -1,31 +1,35 @@
 ﻿using MedicBot.Manager;
 using MedicBot.Model;
 using MedicBot.Utils;
+using MongoDB.Driver;
 using Serilog;
 
 namespace MedicBot.Repository;
 
 public static class UserMuteRepository
 {
+    private static readonly IMongoCollection<UserMute> UserMuteCollection;
+
     static UserMuteRepository()
     {
         // Ensure db and collection is created.
-        LiteDbManager.Database.GetCollection<UserMute>();
+        UserMuteCollection = MongoDbManager.Database.GetCollection<UserMute>(UserMute.CollectionName);
         Log.Information(Constants.DbCollectionInitializedUserMutes);
     }
 
     public static UserMute? Get(ulong userId)
     {
-        return LiteDbManager.Database.GetCollection<UserMute>().FindOne(p => p.Id == userId);
+        return UserMuteCollection.Find(p => p.Id == userId).FirstOrDefault();
     }
 
     public static DateTime GetEndDateTime(ulong userId)
     {
-        return LiteDbManager.Database.GetCollection<UserMute>().FindOne(p => p.Id == userId).EndDateTime;
+        // TODO NullReferenceException here for non-muted users
+        return UserMuteCollection.Find(p => p.Id == userId).FirstOrDefault().EndDateTime;
     }
 
     public static void Delete(ulong userId)
     {
-        LiteDbManager.Database.GetCollection<UserMute>().DeleteMany(u => u.Id == userId);
+        UserMuteCollection.DeleteMany(u => u.Id == userId);
     }
 }

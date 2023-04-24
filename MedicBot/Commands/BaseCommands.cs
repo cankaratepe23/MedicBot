@@ -1,6 +1,8 @@
 ﻿using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
-using MedicBot.Repository;
+using MedicBot.Manager;
+using MongoDB.Bson;
+using MongoDB.Driver;
 using Serilog;
 
 namespace MedicBot.Commands;
@@ -13,7 +15,9 @@ public class BaseCommands : BaseCommandModule
     public async Task TestCommand(CommandContext ctx, [RemainingText] string remainingText)
     {
         Log.Information("Test command called by {User}", ctx.User);
-        await ctx.RespondAsync(SettingsRepository.GetValue<int>(remainingText).ToString());
+        var firstTrack = await MongoDbManager.Database.GetCollection<BsonDocument>("search-test").AsQueryable().FirstOrDefaultAsync();
+        var trackName = firstTrack is null ? "**null**" : firstTrack["Name"];
+        await ctx.RespondAsync(trackName.ToString() ?? "**null**");
     }
 
     [Command("shutdown")]

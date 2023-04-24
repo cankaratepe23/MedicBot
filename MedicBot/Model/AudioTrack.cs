@@ -1,11 +1,15 @@
-﻿using LiteDB;
-using MedicBot.Repository;
+﻿using MedicBot.Repository;
 using MedicBot.Utils;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Bson.Serialization.IdGenerators;
 
 namespace MedicBot.Model;
 
 public class AudioTrack
 {
+    public const string CollectionName = "audioTracks";
+    
     private int _price;
 #pragma warning disable CS8618
     public AudioTrack()
@@ -29,6 +33,7 @@ public class AudioTrack
         Price = price;
     }
 
+    [BsonId(IdGenerator = typeof(ObjectIdGenerator))]
     public ObjectId Id { get; set; }
     public string Name { get; set; }
     public List<string> Aliases { get; set; }

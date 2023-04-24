@@ -12,7 +12,7 @@ public static class Constants
     public const string LavalinkPassword = "5aJCTF!Z2&*853#79r7!xind*u^2LWy";
     private const string LavalinkHost = "127.0.0.1";
     private const int LavalinkPort = 3332;
-    public const string BotTokenEnvironmentVariableName = "Bot_Token_Dev";
+    public const string BotTokenEnvironmentVariableName = "MedicBot_Token_Dev";
     public const string OAuthClientIdEnvironmentVariableName = "MedicBot_OAuth_ClientID";
     public const string OAuthClientSecretEnvironmentVariableName = "MedicBot_OAuth_ClientSecret";
     public const string LiteDatabasePath = @"Filename=medicbot_store.db";
@@ -41,7 +41,7 @@ public static class Constants
     public const string DefaultScore = "default_score";
 
     public static readonly HashSet<string> ObservedSettingKeys = new() {MinNumberOfUsersNeededToEarnPoints};
-    public static readonly HashSet<string> IntegerSettingKeys = new() {MinNumberOfUsersNeededToEarnPoints};
+    public static readonly HashSet<string> IntegerSettingKeys = new() {MinNumberOfUsersNeededToEarnPoints, DefaultScore};
 
     public static readonly char[] InvalidFileNameChars =
     {

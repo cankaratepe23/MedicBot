@@ -2,16 +2,19 @@
 using MedicBot.Manager;
 using MedicBot.Model;
 using MedicBot.Utils;
+using MongoDB.Driver;
 using Serilog;
 
 namespace MedicBot.Repository;
 
 public static class SettingsRepository
 {
+    private static readonly IMongoCollection<BotSetting> SettingsCollection;
+
     static SettingsRepository()
     {
-        // Ensure db and collection is created.
-        LiteDbManager.Database.GetCollection<BotSetting>();
+        // TODO Ensure db and collection is created.
+        SettingsCollection = MongoDbManager.Database.GetCollection<BotSetting>(BotSetting.CollectionName);
         Init(Constants.MinNumberOfUsersNeededToEarnPoints, 2);
         Init(Constants.DefaultScore, 10);
         Log.Information(Constants.DbCollectionInitializedBotSettings);
@@ -19,7 +22,7 @@ public static class SettingsRepository
 
     public static BotSetting? Get(string key)
     {
-        return LiteDbManager.Database.GetCollection<BotSetting>().FindOne(s => s.Key == key);
+        return SettingsCollection.Find(s => s.Key == key).FirstOrDefault();
     }
 
     public static T? GetValue<T>(string key)
@@ -31,7 +34,7 @@ public static class SettingsRepository
 
     public static IEnumerable<BotSetting> All()
     {
-        return LiteDbManager.Database.GetCollection<BotSetting>().FindAll();
+        return SettingsCollection.Find(FilterDefinition<BotSetting>.Empty).ToEnumerable();
     }
 
     public static void Set(string key, object value)
@@ -51,14 +54,14 @@ public static class SettingsRepository
             botSetting.Value = value;
         }
 
-        LiteDbManager.Database.GetCollection<BotSetting>().Upsert(botSetting);
+        SettingsCollection.ReplaceOne(s => s.Key == botSetting.Key, botSetting, new ReplaceOptions {IsUpsert = true});
         if (Constants.ObservedSettingKeys.Contains(key))
         {
             BotSettingHandler.BotSettingChangedHandler(key);
         }
     }
 
-    public static void Init(string key, object value)
+    private static void Init(string key, object value)
     {
         var botSetting = Get(key);
         if (Constants.IntegerSettingKeys.Contains(key))
@@ -71,11 +74,11 @@ public static class SettingsRepository
             return;
         }
 
-        LiteDbManager.Database.GetCollection<BotSetting>().Insert(new BotSetting(key, value));
+        SettingsCollection.InsertOne(new BotSetting(key, value));
     }
 
     public static void Delete(string key)
     {
-        LiteDbManager.Database.GetCollection<BotSetting>().DeleteMany(s => s.Key == key);
+        SettingsCollection.DeleteMany(s => s.Key == key);
     }
 }

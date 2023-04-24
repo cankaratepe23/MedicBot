@@ -1,38 +1,41 @@
 ﻿using Fastenshtein;
-using LiteDB;
 using MedicBot.Manager;
 using MedicBot.Model;
 using MedicBot.Utils;
+using MongoDB.Bson;
+using MongoDB.Driver;
+using MongoDB.Driver.Search;
 using Serilog;
 
 namespace MedicBot.Repository;
 
 public class AudioRepository
 {
+    private static readonly IMongoCollection<AudioTrack> TracksCollection;
+
     // TODO Nested method calls to AudioRepository open two file handles which is sub-optimal
     static AudioRepository()
     {
-        // Ensure db and collection is created.
-        var collection = LiteDbManager.Database.GetCollection<AudioTrack>();
-        collection.EnsureIndex(a => a.Name);
+        // TODO Ensure db and collection is created.
+        var collection = MongoDbManager.Database.GetCollection<AudioTrack>(AudioTrack.CollectionName);
+        TracksCollection = collection;
+        // collection.EnsureIndex(a => a.Name);
         Log.Information(Constants.DbCollectionInitializedAudioTracks);
     }
 
     public static AudioTrack? FindById(string id)
     {
-        return LiteDbManager.Database.GetCollection<AudioTrack>().FindById(new ObjectId(id));
+        return TracksCollection.Find(a => a.Id == new ObjectId(id)).FirstOrDefault();
     }
 
     public static bool NameExists(string name)
     {
-        return LiteDbManager.Database.GetCollection<AudioTrack>()
-            .Exists(a => a.Name == name);
+        return TracksCollection.Find(a => a.Name == name).Any();
     }
 
     public static AudioTrack? FindByNameExact(string name)
     {
-        return LiteDbManager.Database.GetCollection<AudioTrack>()
-            .FindOne(a => a.Name == name);
+        return TracksCollection.Find(a => a.Name == name).FirstOrDefault();
     }
 
     public static AudioTrack? FindByName(string searchTerm)
@@ -51,6 +54,29 @@ public class AudioRepository
 
         // Lucene n-gram or fuzzy search (Has character limitations)
         // Elastic???
+        return FindAtlas(searchTerm);
+    }
+
+    private static AudioTrack? FindAtlas(string searchTerm)
+    {
+        var result = TracksCollection.Aggregate()
+            .Search(
+                Builders<AudioTrack>.Search.Compound()
+                    .Should(Builders<AudioTrack>.Search.Autocomplete(
+                        a => a.Name,
+                        searchTerm,
+                        fuzzy: new SearchFuzzyOptions() {MaxEdits = 1},
+                        score: Builders<AudioTrack>.SearchScore.Boost(3)))
+                    .Should(Builders<AudioTrack>.Search.Text(
+                        a => a.Name,
+                        searchTerm,
+                        fuzzy: new SearchFuzzyOptions() {MaxEdits = 1}))
+            ).FirstOrDefault();
+        return result;
+    }
+
+    private static AudioTrack? FindLevenshtein(string searchTerm)
+    {
         var lev = new Levenshtein(searchTerm);
         var minDistance = int.MaxValue;
         AudioTrack? closestMatch = null;
@@ -76,39 +102,38 @@ public class AudioRepository
 
     public static IEnumerable<AudioTrack> FindAllByName(string searchTerm)
     {
-        return LiteDbManager.Database.GetCollection<AudioTrack>()
-            .Find(t => t.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
-        // TODO Ignore case is probably not needed because of the DSharpPlus Custom command processor
+        return TracksCollection.Find(t => t.Name.Contains(searchTerm)).ToEnumerable();
     }
 
     public static IEnumerable<AudioTrack> All()
     {
-        return LiteDbManager.Database.GetCollection<AudioTrack>().FindAll();
+        return TracksCollection.Find(FilterDefinition<AudioTrack>.Empty).ToEnumerable();
     }
 
     public static List<AudioTrack> FindAllWithTag(string tag)
     {
-        return LiteDbManager.Database.GetCollection<AudioTrack>().Find(t => t.Tags.Contains(tag)).ToList();
+        return TracksCollection.Find(t => t.Tags.Contains(tag)).ToList();
     }
 
     public static List<AudioTrack> FindAllWithAllTags(List<string> tags)
     {
-        return LiteDbManager.Database.GetCollection<AudioTrack>()
+        return TracksCollection
             .Find(track => tags.All(tag => track.Tags.Contains(tag))).ToList();
     }
 
     public static void Add(AudioTrack audioTrack)
     {
-        LiteDbManager.Database.GetCollection<AudioTrack>().Insert(audioTrack);
+        TracksCollection.InsertOne(audioTrack);
     }
 
     public static bool Update(AudioTrack audioTrack)
     {
-        return LiteDbManager.Database.GetCollection<AudioTrack>().Update(audioTrack);
+        var replaceResult = TracksCollection.ReplaceOne(a => a.Id == audioTrack.Id, audioTrack);
+        return replaceResult.MatchedCount == 1;
     }
 
     public static void Delete(ObjectId id)
     {
-        LiteDbManager.Database.GetCollection<AudioTrack>().Delete(id);
+        TracksCollection.DeleteOne(t => t.Id == id);
     }
 }

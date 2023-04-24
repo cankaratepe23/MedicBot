@@ -2,13 +2,14 @@ using AspNet.Security.OAuth.Discord;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.Lavalink;
-using LiteDB;
 using MedicBot.Commands;
 using MedicBot.EventHandler;
 using MedicBot.Manager;
 using MedicBot.Model;
+using MedicBot.Repository;
 using MedicBot.Utils;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using MongoDB.Driver;
 using Serilog;
 
 namespace MedicBot;
@@ -43,6 +44,7 @@ internal static class Program
                 }
             });
         });
+        builder.Configuration.AddEnvironmentVariables(prefix: "MedicBot_");
         var clientId = Environment.GetEnvironmentVariable(Constants.OAuthClientIdEnvironmentVariableName);
         var clientSecret = Environment.GetEnvironmentVariable(Constants.OAuthClientSecretEnvironmentVariableName);
         if (clientId == null || clientSecret == null)
@@ -60,6 +62,23 @@ internal static class Program
                 options.ClientId = clientId;
                 options.ClientSecret = clientSecret;
             });
+
+        var mongoDbSettings = builder.Configuration.GetSection("MongoDb").Get<MongoDbSettings>();
+        if (mongoDbSettings?.ConnectionString is null)
+        {
+            Log.Error("Failed to read MongoDB configuration from appsettings.json");
+            return;
+        }
+        var mongoClientSettings = MongoClientSettings.FromConnectionString(mongoDbSettings.ConnectionString);
+        var mongoClient = new MongoClient(mongoClientSettings);
+        var mongoDb = mongoClient.GetDatabase(mongoDbSettings.Database);
+        if (mongoDb is null)
+        {
+            Log.Error("Failed to connect to MongoDB database");
+            return;
+        }
+
+        MongoDbManager.Database = mongoDb;
 
         var app = builder.Build();
 
@@ -97,14 +116,6 @@ internal static class Program
         Log.Logger = loggerConfiguration.CreateLogger();
 
         var logFactory = new LoggerFactory().AddSerilog();
-
-        #endregion
-
-        #region LiteDB Config
-
-        var mapper = BsonMapper.Global;
-        mapper.Entity<BotSetting>()
-            .Id(s => s.Key);
 
         #endregion
 
@@ -148,7 +159,8 @@ internal static class Program
         // Commands Init
         var commands = discord.UseCommandsNext(new CommandsNextConfiguration
         {
-            StringPrefixes = Constants.BotPrefixes
+            StringPrefixes = Constants.BotPrefixes,
+            Services = app.Services
         });
         commands.RegisterCommands<BaseCommands>();
         commands.RegisterCommands<AudioCommands>();
