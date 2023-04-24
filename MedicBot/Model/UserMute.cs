@@ -2,6 +2,8 @@
 
 public class UserMute
 {
+    public const string CollectionName = "userMutes";
+
     public UserMute()
     {
     }

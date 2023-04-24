@@ -2,7 +2,6 @@ using AspNet.Security.OAuth.Discord;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.Lavalink;
-using LiteDB;
 using MedicBot.Commands;
 using MedicBot.EventHandler;
 using MedicBot.Manager;
@@ -72,7 +71,14 @@ internal static class Program
         }
         var mongoClientSettings = MongoClientSettings.FromConnectionString(mongoDbSettings.ConnectionString);
         var mongoClient = new MongoClient(mongoClientSettings);
-        builder.Services.AddSingleton(mongoClient.GetDatabase(mongoDbSettings.Database));
+        var mongoDb = mongoClient.GetDatabase(mongoDbSettings.Database);
+        if (mongoDb is null)
+        {
+            Log.Error("Failed to connect to MongoDB database");
+            return;
+        }
+
+        MongoDbManager.Database = mongoDb;
 
         var app = builder.Build();
 
@@ -110,14 +116,6 @@ internal static class Program
         Log.Logger = loggerConfiguration.CreateLogger();
 
         var logFactory = new LoggerFactory().AddSerilog();
-
-        #endregion
-
-        #region LiteDB Config
-
-        var mapper = BsonMapper.Global;
-        mapper.Entity<BotSetting>()
-            .Id(s => s.Key);
 
         #endregion
 

@@ -2,6 +2,8 @@
 
 public class UserPoints
 {
+    public const string CollectionName = "userPoints";
+
     public UserPoints()
     {
     }
