@@ -83,6 +83,10 @@ public static class AudioManager
     public static IEnumerable<AudioTrack> FindAsync(string searchQuery)
     {
         // TODO Allow searching by ID with a special prefix or something
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
+            return AudioRepository.All(); // TODO Pagination and DM for large messages
+        }
         return AudioRepository.FindAllByName(searchQuery);
     }
 
