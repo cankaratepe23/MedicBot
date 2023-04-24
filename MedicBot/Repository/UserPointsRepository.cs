@@ -24,11 +24,12 @@ public static class UserPointsRepository
 
     public static int GetPoints(ulong userId)
     {
-        // TODO Null reference exception
-        return UserPointsCollection.Find(p => p.Id == userId).FirstOrDefault().Score;
+        // TODO Make initial balance configurable
+        var userPoints = Get(userId) ?? AddPoints(userId, SettingsRepository.GetValue<int>(Constants.DefaultScore) * 100);
+        return userPoints.Score;
     }
 
-    public static void AddPoints(ulong userId, int score)
+    public static UserPoints AddPoints(ulong userId, int score)
     {
         var currentPoints = Get(userId);
 
@@ -42,5 +43,6 @@ public static class UserPointsRepository
         }
 
         UserPointsCollection.ReplaceOne(p => p.Id == currentPoints.Id, currentPoints, new ReplaceOptions {IsUpsert = true});
+        return currentPoints;
     }
 }
