@@ -14,11 +14,11 @@ jobs:
           echo "${{ secrets.OVH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           cat >>~/.ssh/config <<END
-          Host $SSH_HOST
+          Host ${{ secrets.OVH_HOST }}
             HostName ${{ secrets.OVH_HOST }}
             User ${{ secrets.OVH_USERNAME }}
             IdentityFile ~/.ssh/id_ed25519
           END
 
       - name: Stop the server
-        run: ssh $SSH_HOST 'sudo systemctl stop medicbot-v3.service; cd ${{ secrets.REPO_PATH }}; git pull; sudo systemctl restart medicbot-v3.service'
+        run: ssh ${{ secrets.OVH_HOST }} 'sudo systemctl stop medicbot-v3.service; cd ${{ secrets.REPO_PATH }}; git pull; sudo systemctl restart medicbot-v3.service'
