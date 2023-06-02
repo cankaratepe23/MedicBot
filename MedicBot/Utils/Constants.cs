@@ -8,6 +8,7 @@ public static class Constants
         "[{Timestamp:yyyy-MM-dd HH:mm:ss zzz}] [{Level:u3}] {Message:lj}{NewLine}{Exception}";
 
     public const string AudioTracksPath = @"res";
+    public const string TempFilesPath = @"temp";
 
     public const string LavalinkPassword = "5aJCTF!Z2&*853#79r7!xind*u^2LWy";
     private const string LavalinkHost = "127.0.0.1";

@@ -148,12 +148,18 @@ internal static class Program
 
         // Ensure tracks folder exists
         var audioTracksPath = Constants.AudioTracksPath;
+        var tempFilesPath = Constants.TempFilesPath;
         if (!Directory.Exists(audioTracksPath))
         {
             Directory.CreateDirectory(audioTracksPath);
         }
 
-        AudioManager.Init(discord, audioTracksPath);
+        if (!Directory.Exists(tempFilesPath))
+        {
+            Directory.CreateDirectory(tempFilesPath);
+        }
+
+        AudioManager.Init(discord, audioTracksPath, tempFilesPath);
         VoiceStateHandler.Init(discord);
 
         // Commands Init

@@ -1,4 +1,5 @@
-﻿using DSharpPlus;
+﻿using System.IO.Compression;
+using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.Lavalink;
 using MedicBot.Exceptions;
@@ -13,11 +14,13 @@ public static class AudioManager
 {
     private static DiscordClient Client { get; set; } = null!;
     private static string AudioTracksPath { get; set; } = null!;
+    private static string TempFilesPath { get; set; } = null!;
 
-    public static void Init(DiscordClient client, string tracksPath)
+    public static void Init(DiscordClient client, string tracksPath, string tempFilesPath)
     {
         Client = client;
         AudioTracksPath = tracksPath;
+        TempFilesPath = tempFilesPath;
     }
 
     public static async Task AddAsync(string audioName, ulong userId, string url)
@@ -43,7 +46,7 @@ public static class AudioManager
 
         var fileExtension = url[url.LastIndexOf('.')..];
         var fileName = audioName + fileExtension;
-        var filePath = string.Join('/', AudioTracksPath, fileName);
+        var filePath = fileExtension.ToLowerInvariant() == ".zip" ? string.Join('/', TempFilesPath, fileName) : string.Join('/', AudioTracksPath, fileName);
         {
             using var client = new HttpClient();
             await using var stream = await client.GetStreamAsync(url);
@@ -51,7 +54,29 @@ public static class AudioManager
             await stream.CopyToAsync(fileStream);
             await fileStream.FlushAsync();
         }
-        AudioRepository.Add(new AudioTrack(audioName, filePath, userId));
+
+        if (fileExtension.ToLowerInvariant() == ".zip")
+        {
+            var filesDirectory = string.Join('/', TempFilesPath, audioName);
+            ZipFile.ExtractToDirectory(filePath, filesDirectory);
+            foreach (var file in Directory.GetFiles(filesDirectory))
+            {
+                var newAudioName = Path.GetFileName(file);
+                var newFilePath = string.Join('/', AudioTracksPath, newAudioName);
+                File.Move(file, newFilePath);
+                if (AudioRepository.NameExists(audioName))
+                {
+                    Log.Warning("An AudioTrack with the name {AudioName} already exists", newAudioName);
+                    Log.Warning("Skipping adding track with name {AudioName}", newAudioName);
+                    continue;
+                }
+                AudioRepository.Add(new AudioTrack(newAudioName, newFilePath, userId));
+            }
+        }
+        else
+        {
+            AudioRepository.Add(new AudioTrack(audioName, filePath, userId));
+        }
     }
 
     public static async Task DeleteAsync(string audioName, ulong userId)
