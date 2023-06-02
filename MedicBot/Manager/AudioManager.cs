@@ -45,9 +45,12 @@ public static class AudioManager
         }
 
         var fileExtension = url[url.LastIndexOf('.')..];
+        Log.Information("Detected file extension: {FileExtension}", fileExtension);
         var fileName = audioName + fileExtension;
         var filePath = fileExtension.ToLowerInvariant() == ".zip" ? string.Join('/', TempFilesPath, fileName) : string.Join('/', AudioTracksPath, fileName);
+        
         {
+            Log.Information("Downloading file to {FilePath}", filePath);
             using var client = new HttpClient();
             await using var stream = await client.GetStreamAsync(url);
             await using var fileStream = File.OpenWrite(filePath);
@@ -57,11 +60,13 @@ public static class AudioManager
 
         if (fileExtension.ToLowerInvariant() == ".zip")
         {
+            Log.Information("Extracting zip...");
             var filesDirectory = string.Join('/', TempFilesPath, audioName);
             ZipFile.ExtractToDirectory(filePath, filesDirectory);
             foreach (var file in Directory.GetFiles(filesDirectory))
             {
                 var newAudioName = Path.GetFileName(file);
+                Log.Information("Adding {AudioTrackName}", newAudioName);
                 var newFilePath = string.Join('/', AudioTracksPath, newAudioName);
                 File.Move(file, newFilePath);
                 if (AudioRepository.NameExists(audioName))

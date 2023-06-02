@@ -147,15 +147,18 @@ internal static class Program
         #region Initializations
 
         // Ensure tracks folder exists
+        Log.Information("Checking initial directories");
         var audioTracksPath = Constants.AudioTracksPath;
         var tempFilesPath = Constants.TempFilesPath;
         if (!Directory.Exists(audioTracksPath))
         {
+            Log.Information("Creating {DirectoryPath}", audioTracksPath);
             Directory.CreateDirectory(audioTracksPath);
         }
 
         if (!Directory.Exists(tempFilesPath))
         {
+            Log.Information("Creating {DirectoryPath}", tempFilesPath);
             Directory.CreateDirectory(tempFilesPath);
         }
 
