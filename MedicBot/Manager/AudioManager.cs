@@ -68,6 +68,10 @@ public static class AudioManager
         {
             Log.Information("Extracting 7z...");
             var filesDirectory = string.Join('/', TempFilesPath, audioName);
+            if (!Directory.Exists(filesDirectory))
+            {
+                Directory.CreateDirectory(filesDirectory);
+            }
 
             using (var archive = SevenZipArchive.Open(filePath))
             using (var reader = archive.ExtractAllEntries())
