@@ -1,0 +1,25 @@
+name: CI
+on: 
+  push:
+    branches:
+      - master
+jobs:
+  deploy:
+    name: "Restart & Update MedicBot"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh/
+          echo "${{ secrets.OVH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -t rsa ${{ secrets.OVH_HOST }} >> ~/.ssh/known_hosts
+          cat >>~/.ssh/config <<END
+          Host ${{ secrets.OVH_HOST }}
+            HostName ${{ secrets.OVH_HOST }}
+            User ${{ secrets.OVH_USERNAME }}
+            IdentityFile ~/.ssh/id_ed25519
+          END
+
+      - name: Stop, Update and Restart MedicBot
+        run: ssh ${{ secrets.OVH_HOST }} 'sudo systemctl stop medicbot-v3.service; cd ${{ secrets.REPO_PATH }}; git pull; sudo systemctl restart medicbot-v3.service'
