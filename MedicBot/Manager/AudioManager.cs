@@ -7,6 +7,10 @@ using MedicBot.Model;
 using MedicBot.Repository;
 using MedicBot.Utils;
 using Serilog;
+using SharpCompress.Archives;
+using SharpCompress.Archives.SevenZip;
+using SharpCompress.Common;
+using SharpCompress.Readers;
 
 namespace MedicBot.Manager;
 
@@ -47,8 +51,10 @@ public static class AudioManager
         var fileExtension = url[url.LastIndexOf('.')..];
         Log.Information("Detected file extension: {FileExtension}", fileExtension);
         var fileName = audioName + fileExtension;
-        var filePath = fileExtension.ToLowerInvariant() == ".zip" ? string.Join('/', TempFilesPath, fileName) : string.Join('/', AudioTracksPath, fileName);
-        
+        var filePath = fileExtension.ToLowerInvariant() == ".7z"
+            ? string.Join('/', TempFilesPath, fileName)
+            : string.Join('/', AudioTracksPath, fileName);
+
         {
             Log.Information("Downloading file to {FilePath}", filePath);
             using var client = new HttpClient();
@@ -58,11 +64,17 @@ public static class AudioManager
             await fileStream.FlushAsync();
         }
 
-        if (fileExtension.ToLowerInvariant() == ".zip")
+        if (fileExtension.ToLowerInvariant() == ".7z")
         {
-            Log.Information("Extracting zip...");
+            Log.Information("Extracting 7z...");
             var filesDirectory = string.Join('/', TempFilesPath, audioName);
-            ZipFile.ExtractToDirectory(filePath, filesDirectory);
+
+            using (var archive = SevenZipArchive.Open(filePath))
+            using (var reader = archive.ExtractAllEntries())
+            {
+                reader.WriteAllToDirectory(filesDirectory);
+            }
+
             foreach (var file in Directory.GetFiles(filesDirectory))
             {
                 var newAudioName = Path.GetFileName(file);
@@ -75,6 +87,7 @@ public static class AudioManager
                     Log.Warning("Skipping adding track with name {AudioName}", newAudioName);
                     continue;
                 }
+
                 AudioRepository.Add(new AudioTrack(newAudioName, newFilePath, userId));
             }
         }
