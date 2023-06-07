@@ -146,4 +146,20 @@ public class AudioCommands : BaseCommandModule
             throw;
         }
     }
+
+    [Command("news")]
+    public async Task NewsCommand(CommandContext ctx, long limit = 10)
+    {
+        try
+        {
+            var newTracks = await AudioManager.GetNewTracksAsync(limit);
+                await ctx.Channel.SendPaginatedMessageAsync(ctx.User,
+                    ctx.Client.GetInteractivity().GeneratePagesInEmbed(string.Join("\n", newTracks)));
+        }
+        catch (Exception e)
+        {
+            await ctx.RespondAsync(e.Message);
+            throw;
+        }
+    }
 }

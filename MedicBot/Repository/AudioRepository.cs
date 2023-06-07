@@ -140,6 +140,14 @@ public class AudioRepository
             .Find(track => tags.All(tag => track.Tags.Contains(tag))).ToList();
     }
 
+    public static List<AudioTrack> GetOrderedByDate(long limit)
+    {
+        return TracksCollection.Aggregate()
+            .SortByDescending(t => t.Id)
+            .Limit(limit)
+            .ToList();
+    }
+
     public static void Add(AudioTrack audioTrack)
     {
         TracksCollection.InsertOne(audioTrack);

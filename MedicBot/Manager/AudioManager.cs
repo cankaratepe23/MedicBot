@@ -144,6 +144,11 @@ public static class AudioManager
         return await AudioRepository.FindManyAtlas(searchQuery, limit);
     }
 
+    public static async Task<IEnumerable<AudioTrack>> GetNewTracksAsync(long limit = 10)
+    {
+        return AudioRepository.GetOrderedByDate(limit);
+    }
+
     // TODO Add summary docs for everything
 
     #region Join
