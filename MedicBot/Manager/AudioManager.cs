@@ -81,9 +81,10 @@ public static class AudioManager
 
             foreach (var file in Directory.GetFiles(filesDirectory))
             {
-                var newAudioName = Path.GetFileName(file);
+                var newAudioFileName = Path.GetFileName(file);
+                var newAudioName = Path.GetFileNameWithoutExtension(newAudioFileName);
                 Log.Information("Adding {AudioTrackName}", newAudioName);
-                var newFilePath = string.Join('/', AudioTracksPath, newAudioName);
+                var newFilePath = string.Join('/', AudioTracksPath, newAudioFileName);
                 File.Move(file, newFilePath);
                 if (AudioRepository.NameExists(audioName))
                 {
