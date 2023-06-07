@@ -55,5 +55,5 @@ public static class Constants
 
     public static readonly ConnectionEndpoint LavalinkEndpoint = new(LavalinkHost, LavalinkPort);
 
-    public static readonly string[] BotPrefixes = {"*"};
+    public static readonly string[] BotPrefixes = {"*", "$"};
 }
