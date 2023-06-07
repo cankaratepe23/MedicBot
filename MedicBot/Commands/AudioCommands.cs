@@ -1,6 +1,7 @@
 ﻿using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
+using DSharpPlus.Interactivity.Extensions;
 using MedicBot.Exceptions;
 using MedicBot.Manager;
 using MedicBot.Utils;
@@ -116,6 +117,7 @@ public class AudioCommands : BaseCommandModule
                 await ctx.RespondAsync("Direct messages are not supported yet");
                 return;
             }
+
             await AudioManager.PlayAsync(audioName, ctx.Guild, ctx.Member);
         }
         catch (AudioTrackNotFoundException e)
@@ -129,12 +131,14 @@ public class AudioCommands : BaseCommandModule
     }
 
     [Command("list")]
-    public async Task ListCommand(CommandContext ctx, [RemainingText] string audioName)
+    [Aliases("search")]
+    public async Task ListCommand(CommandContext ctx, string searchTerm = "", long limit = 10)
     {
         try
         {
-            var matchingTracks = AudioManager.FindAsync(audioName).Select(t => t.Name);
-            await ctx.RespondAsync(string.Join(";", matchingTracks));
+            var matchingTracks = (await AudioManager.FindAsync(searchTerm, limit)).Select(t => t.Name).ToList();
+            await ctx.Channel.SendPaginatedMessageAsync(ctx.User,
+                ctx.Client.GetInteractivity().GeneratePagesInEmbed(string.Join("\n", matchingTracks)));
         }
         catch (Exception e)
         {

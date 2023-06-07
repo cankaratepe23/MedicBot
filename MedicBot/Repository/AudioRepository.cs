@@ -54,10 +54,10 @@ public class AudioRepository
 
         // Lucene n-gram or fuzzy search (Has character limitations)
         // Elastic???
-        return FindAtlas(searchTerm);
+        return FindOneAtlas(searchTerm);
     }
 
-    private static AudioTrack? FindAtlas(string searchTerm)
+    public static AudioTrack? FindOneAtlas(string searchTerm)
     {
         var result = TracksCollection.Aggregate()
             .Search(
@@ -73,6 +73,25 @@ public class AudioRepository
                         fuzzy: new SearchFuzzyOptions() {MaxEdits = 1}))
             ).FirstOrDefault();
         return result;
+    }
+
+    public static async Task<List<AudioTrack>> FindManyAtlas(string searchTerm, long limit)
+    {
+        var results = await TracksCollection.Aggregate()
+            .Search(
+                Builders<AudioTrack>.Search.Compound()
+                    .Should(Builders<AudioTrack>.Search.Autocomplete(
+                        a => a.Name,
+                        searchTerm,
+                        fuzzy: new SearchFuzzyOptions() {MaxEdits = 1},
+                        score: Builders<AudioTrack>.SearchScore.Boost(3)))
+                    .Should(Builders<AudioTrack>.Search.Text(
+                        a => a.Name,
+                        searchTerm,
+                        fuzzy: new SearchFuzzyOptions() {MaxEdits = 1}))
+            )
+            .Limit(limit).ToListAsync();
+        return results;
     }
 
     private static AudioTrack? FindLevenshtein(string searchTerm)

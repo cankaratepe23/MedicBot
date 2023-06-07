@@ -1,6 +1,9 @@
 using AspNet.Security.OAuth.Discord;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
+using DSharpPlus.Interactivity;
+using DSharpPlus.Interactivity.Enums;
+using DSharpPlus.Interactivity.Extensions;
 using DSharpPlus.Lavalink;
 using MedicBot.Commands;
 using MedicBot.EventHandler;
@@ -177,6 +180,13 @@ internal static class Program
         commands.RegisterCommands<ImportExportCommands>();
         commands.RegisterConverter(new StringLowercaseConverter());
 
+        // Interactivity Init
+        discord.UseInteractivity(new InteractivityConfiguration() 
+        { 
+            PollBehaviour = PollBehaviour.KeepEmojis,
+            Timeout = TimeSpan.FromSeconds(15)
+        });
+        
         #endregion
 
         // Register events

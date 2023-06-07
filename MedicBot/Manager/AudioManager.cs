@@ -128,7 +128,7 @@ public static class AudioManager
         File.Delete(audioTrack.Path);
     }
 
-    public static IEnumerable<AudioTrack> FindAsync(string searchQuery)
+    public static async Task<IEnumerable<AudioTrack>> FindAsync(string searchQuery, long limit = 10)
     {
         // TODO Allow searching by ID with a special prefix or something
         if (string.IsNullOrWhiteSpace(searchQuery))
@@ -136,7 +136,12 @@ public static class AudioManager
             return AudioRepository.All(); // TODO Pagination and DM for large messages
         }
 
-        return AudioRepository.FindAllByName(searchQuery);
+        if (searchQuery.StartsWith('\"') && searchQuery.EndsWith('"'))
+        {
+            return AudioRepository.FindAllByName(searchQuery.Trim('"'));
+        }
+
+        return await AudioRepository.FindManyAtlas(searchQuery, limit);
     }
 
     // TODO Add summary docs for everything
