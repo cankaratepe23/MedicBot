@@ -321,6 +321,7 @@ public static class AudioManager
     public static async Task PlayAsync(string audioName, DiscordGuild guild, DiscordMember member,
         bool searchById = false)
     {
+        // TODO Set "Playing..." status
         if (Uri.TryCreate(audioName, UriKind.Absolute, out var uriResult))
         {
             if (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps)

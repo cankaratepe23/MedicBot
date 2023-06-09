@@ -142,6 +142,7 @@ public class AudioCommands : BaseCommandModule
     {
         try
         {
+            // TODO prefix first tag name to audio name with ':'
             var matchingTracks = (await AudioManager.FindAsync(searchTerm, limit)).Select(t => t.Name).ToList();
             await ctx.Channel.SendPaginatedMessageAsync(ctx.User,
                 ctx.Client.GetInteractivity().GeneratePagesInEmbed(string.Join("\n", matchingTracks)));
