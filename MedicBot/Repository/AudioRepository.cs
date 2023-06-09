@@ -4,6 +4,7 @@ using MedicBot.Model;
 using MedicBot.Utils;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using MongoDB.Driver.Linq;
 using MongoDB.Driver.Search;
 using Serilog;
 
@@ -38,44 +39,7 @@ public class AudioRepository
         return TracksCollection.Find(a => a.Name == name).FirstOrDefault();
     }
 
-    public static AudioTrack? FindByName(string searchTerm)
-    {
-        // TODO: Alternatives for fuzzy name search to consider:
-        // Get only the names from the DB
-        // Store DB entries in a static dictionary as cache
-        // Multi-threaded distance computation for all tracks, store results sorted by distance and get top entry
-
-        // Ask the user when the match is below a certain threshold and/or is too close to another audio track.
-        // These user choices can be stored in a per-user basis in LiteDB. OR: They can be added as aliases
-        // Maybe we can make the user choices expire after some time
-
-        // Build a cache for past queries and their matches
-
-
-        // Lucene n-gram or fuzzy search (Has character limitations)
-        // Elastic???
-        return FindOneAtlas(searchTerm);
-    }
-
-    public static AudioTrack? FindOneAtlas(string searchTerm)
-    {
-        var result = TracksCollection.Aggregate()
-            .Search(
-                Builders<AudioTrack>.Search.Compound()
-                    .Should(Builders<AudioTrack>.Search.Autocomplete(
-                        a => a.Name,
-                        searchTerm,
-                        fuzzy: new SearchFuzzyOptions() {MaxEdits = 1},
-                        score: Builders<AudioTrack>.SearchScore.Boost(3)))
-                    .Should(Builders<AudioTrack>.Search.Text(
-                        a => a.Name,
-                        searchTerm,
-                        fuzzy: new SearchFuzzyOptions() {MaxEdits = 1}))
-            ).FirstOrDefault();
-        return result;
-    }
-
-    public static async Task<List<AudioTrack>> FindManyAtlas(string searchTerm, long limit)
+    private static async Task<List<AudioTrack>> FindManyAtlas(string searchTerm, long limit)
     {
         var results = await TracksCollection.Aggregate()
             .Search(
@@ -90,6 +54,26 @@ public class AudioRepository
                         searchTerm,
                         fuzzy: new SearchFuzzyOptions() {MaxEdits = 1}))
             )
+            .Limit(limit).ToListAsync();
+        return results;
+    }
+
+    private static async Task<List<AudioTrack>> FindManyWithTagAtlas(string searchTerm, string tag, long limit)
+    {
+        var results = await TracksCollection.Aggregate()
+            .Search(
+                Builders<AudioTrack>.Search.Compound()
+                    .Should(Builders<AudioTrack>.Search.Autocomplete(
+                        a => a.Name,
+                        searchTerm,
+                        fuzzy: new SearchFuzzyOptions() {MaxEdits = 1},
+                        score: Builders<AudioTrack>.SearchScore.Boost(3)))
+                    .Should(Builders<AudioTrack>.Search.Text(
+                        a => a.Name,
+                        searchTerm,
+                        fuzzy: new SearchFuzzyOptions() {MaxEdits = 1}))
+            )
+            .Match(t => t.Tags.Contains(tag))
             .Limit(limit).ToListAsync();
         return results;
     }
@@ -119,19 +103,39 @@ public class AudioRepository
         return closestMatch;
     }
 
-    public static IEnumerable<AudioTrack> FindAllByName(string searchTerm)
+    public static IEnumerable<AudioTrack> FindAllByName(string searchTerm, string? tag = null)
     {
-        return TracksCollection.Find(t => t.Name.Contains(searchTerm)).ToEnumerable();
+        if (string.IsNullOrWhiteSpace(tag))
+        {
+            return TracksCollection.Find(t => t.Name.Contains(searchTerm)).ToEnumerable();
+        }
+        return TracksCollection.Find(t => t.Name.Contains(searchTerm) && t.Tags.Contains(tag)).ToEnumerable();
     }
 
-    public static IEnumerable<AudioTrack> All()
+    public static Task<List<AudioTrack>> FindMany(string searchQuery, long limit, string? tag = null)
     {
-        return TracksCollection.Find(FilterDefinition<AudioTrack>.Empty).ToEnumerable();
+        if (string.IsNullOrWhiteSpace(tag))
+        {
+            return FindManyAtlas(searchQuery, limit);
+        }
+        return FindManyWithTagAtlas(searchQuery, tag, limit);
     }
 
-    public static List<AudioTrack> FindAllWithTag(string tag)
+    public static IEnumerable<AudioTrack> All(string? tag = null)
     {
-        return TracksCollection.Find(t => t.Tags.Contains(tag)).ToList();
+        return string.IsNullOrWhiteSpace(tag)
+            ? TracksCollection.Find(FilterDefinition<AudioTrack>.Empty).ToEnumerable()
+            : TracksCollection.Find(t => t.Tags.Contains(tag)).ToList();
+    }
+
+    public static async Task<AudioTrack> Random(string? tag = null)
+    {
+        if (string.IsNullOrWhiteSpace(tag))
+        {
+            return await TracksCollection.AsQueryable().Sample(1).FirstOrDefaultAsync();
+        }
+
+        return await TracksCollection.AsQueryable().Where(t => t.Tags.Contains(tag)).Sample(1).FirstOrDefaultAsync();
     }
 
     public static List<AudioTrack> FindAllWithAllTags(List<string> tags)

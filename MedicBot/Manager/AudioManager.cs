@@ -131,17 +131,33 @@ public static class AudioManager
     public static async Task<IEnumerable<AudioTrack>> FindAsync(string searchQuery, long limit = 10)
     {
         // TODO Allow searching by ID with a special prefix or something
-        if (string.IsNullOrWhiteSpace(searchQuery))
+
+        string? tag = null;
+        searchQuery = searchQuery.Trim();
+        if (searchQuery.Contains(':'))
         {
-            return AudioRepository.All(); // TODO Pagination and DM for large messages
+            var splitQuery = searchQuery.Split(':');
+            tag = splitQuery[0];
+            searchQuery = splitQuery[1].Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(searchQuery) || searchQuery == "?")
+        {
+            if (limit == 1)
+            {
+                var randomTrack = await AudioRepository.Random(tag);
+                return new List<AudioTrack> {randomTrack};
+            }
+
+            return AudioRepository.All(tag);
         }
 
         if (searchQuery.StartsWith('\"') && searchQuery.EndsWith('"'))
         {
-            return AudioRepository.FindAllByName(searchQuery.Trim('"'));
+            return AudioRepository.FindAllByName(searchQuery.Trim('"'), tag);
         }
 
-        return await AudioRepository.FindManyAtlas(searchQuery, limit);
+        return await AudioRepository.FindMany(searchQuery, limit, tag);
     }
 
     public static async Task<IEnumerable<AudioTrack>> GetNewTracksAsync(long limit = 10)
@@ -314,9 +330,10 @@ public static class AudioManager
             }
         }
 
-        var audioTrack = searchById
+        /* var audioTrack = searchById
             ? AudioRepository.FindById(audioName)
-            : AudioRepository.FindByName(audioName);
+            : AudioRepository.FindByName(audioName); */
+        var audioTrack = (await FindAsync(audioName, 1)).FirstOrDefault();
         if (audioTrack == null)
         {
             Log.Warning("No track was found with {IdOrName}: {Id}", searchById ? "ID" : "name", audioName);

@@ -107,6 +107,12 @@ public class AudioCommands : BaseCommandModule
     }
 
     [Command("play")]
+    public async Task PlayCommand(CommandContext ctx)
+    {
+        await PlayCommand(ctx, "");
+    }
+    
+    [Command("play")]
     public async Task PlayCommand(CommandContext ctx, [RemainingText] string audioName)
     {
         try
