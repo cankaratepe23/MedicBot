@@ -49,6 +49,6 @@ public class AudioTrack
 
     public override string ToString()
     {
-        return Name + (Tags.Count != 0 ? " (" + Tags.FirstOrDefault() + ")" : "");
+        return (Tags.Count != 0 ? Tags.FirstOrDefault() + ":" : "") + Name;
     }
 }
