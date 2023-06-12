@@ -111,7 +111,7 @@ public class AudioCommands : BaseCommandModule
     {
         await PlayCommand(ctx, "");
     }
-    
+
     [Command("play")]
     public async Task PlayCommand(CommandContext ctx, [RemainingText] string audioName)
     {
@@ -142,8 +142,12 @@ public class AudioCommands : BaseCommandModule
     {
         try
         {
-            // TODO prefix first tag name to audio name with ':'
-            var matchingTracks = (await AudioManager.FindAsync(searchTerm, limit)).Select(t => t.Name).ToList();
+            var matchingTracks = (await AudioManager.FindAsync(searchTerm, limit)).ToList();
+            if (matchingTracks.Count == 0)
+            {
+                await ctx.RespondAsync("No matching tracks found");
+                return;
+            }
             await ctx.Channel.SendPaginatedMessageAsync(ctx.User,
                 ctx.Client.GetInteractivity().GeneratePagesInEmbed(string.Join("\n", matchingTracks)));
         }
@@ -160,8 +164,30 @@ public class AudioCommands : BaseCommandModule
         try
         {
             var newTracks = await AudioManager.GetNewTracksAsync(limit);
-                await ctx.Channel.SendPaginatedMessageAsync(ctx.User,
-                    ctx.Client.GetInteractivity().GeneratePagesInEmbed(string.Join("\n", newTracks)));
+            await ctx.Channel.SendPaginatedMessageAsync(ctx.User,
+                ctx.Client.GetInteractivity().GeneratePagesInEmbed(string.Join("\n", newTracks)));
+        }
+        catch (Exception e)
+        {
+            await ctx.RespondAsync(e.Message);
+            throw;
+        }
+    }
+
+    [Command("history")]
+    public async Task HistoryCommand(CommandContext ctx)
+    {
+        try
+        {
+            var lastPlayedTracks = AudioManager.GetLastPlayedTracks(ctx.Guild);
+            if (lastPlayedTracks is null)
+            {
+                await ctx.RespondAsync("No tracks have been played yet");
+                return;
+            }
+
+            await ctx.Channel.SendPaginatedMessageAsync(ctx.User,
+                ctx.Client.GetInteractivity().GeneratePagesInEmbed(string.Join("\n", lastPlayedTracks)));
         }
         catch (Exception e)
         {

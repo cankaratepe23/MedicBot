@@ -1,5 +1,4 @@
-﻿using System.IO.Compression;
-using DSharpPlus;
+﻿using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.Lavalink;
 using MedicBot.Exceptions;
@@ -7,9 +6,7 @@ using MedicBot.Model;
 using MedicBot.Repository;
 using MedicBot.Utils;
 using Serilog;
-using SharpCompress.Archives;
 using SharpCompress.Archives.SevenZip;
-using SharpCompress.Common;
 using SharpCompress.Readers;
 
 namespace MedicBot.Manager;
@@ -19,6 +16,8 @@ public static class AudioManager
     private static DiscordClient Client { get; set; } = null!;
     private static string AudioTracksPath { get; set; } = null!;
     private static string TempFilesPath { get; set; } = null!;
+
+    private static Dictionary<ulong, Queue<AudioTrack>> LastPlayedTracks { get; set; } = new();
 
     public static void Init(DiscordClient client, string tracksPath, string tempFilesPath)
     {
@@ -165,6 +164,11 @@ public static class AudioManager
         return AudioRepository.GetOrderedByDate(limit);
     }
 
+    public static IEnumerable<AudioTrack>? GetLastPlayedTracks(DiscordGuild guild)
+    {
+        return LastPlayedTracks.TryGetValue(guild.Id, out var tracks) ? tracks : null;
+    }
+
     // TODO Add summary docs for everything
 
     #region Join
@@ -287,6 +291,18 @@ public static class AudioManager
             throw new LavalinkLoadFailedException(result.LoadResultType.ToString());
         }
 
+        if (!LastPlayedTracks.ContainsKey(guild.Id))
+        {
+            LastPlayedTracks.Add(guild.Id, new Queue<AudioTrack>(10));
+        }
+
+        if (LastPlayedTracks[guild.Id].Count >= 10)
+        {
+            _ = LastPlayedTracks[guild.Id].Dequeue();
+        }
+
+        LastPlayedTracks[guild.Id].Enqueue(audioTrack);
+        
         await connection.PlayAsync(result.Tracks.FirstOrDefault());
     }
 
@@ -321,7 +337,6 @@ public static class AudioManager
     public static async Task PlayAsync(string audioName, DiscordGuild guild, DiscordMember member,
         bool searchById = false)
     {
-        // TODO Set "Playing..." status
         if (Uri.TryCreate(audioName, UriKind.Absolute, out var uriResult))
         {
             if (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps)
@@ -359,30 +374,28 @@ public static class AudioManager
         var lava = Client.GetLavalink();
 
         var connection = lava.GetGuildConnection(guild);
-        if (connection != null)
+        if (connection == null)
         {
-            return connection;
+            Log.Information("Play was called when bot was not in a voice channel");
+            Log.Information("Trying to join a voice channel");
+            var channelToJoin = guild.Channels.VoiceChannelWithMostNonBotUsers();
+            if (channelToJoin == null)
+            {
+                Log.Warning("JoinGuildIdAsync() couldn't find the most crowded channel in {Guild}", guild);
+                throw new ChannelNotFoundException($"Couldn't find the most crowded channel in {guild}");
+            }
+
+            await JoinAsync(channelToJoin);
+            connection = lava.GetGuildConnection(guild);
+            if (connection == null)
+            {
+                Log.Error("Bot couldn't join the most crowded channel, but no exception was thrown");
+                throw new Exception("Fatal: Bot was not in a voice channel when play was called, " +
+                                    "and it couldn't join the most crowded channel either," +
+                                    "but it threw no exceptions when it was supposed to.");
+            }
         }
 
-        Log.Information("Play was called when bot was not in a voice channel");
-        Log.Information("Trying to join a voice channel");
-        var channelToJoin = guild.Channels.VoiceChannelWithMostNonBotUsers();
-        if (channelToJoin == null)
-        {
-            Log.Warning("JoinGuildIdAsync() couldn't find the most crowded channel in {Guild}", guild);
-            throw new ChannelNotFoundException($"Couldn't find the most crowded channel in {guild}");
-        }
-
-        await JoinAsync(channelToJoin);
-        connection = lava.GetGuildConnection(guild);
-        if (connection != null)
-        {
-            return connection;
-        }
-
-        Log.Error("Bot couldn't join the most crowded channel, but no exception was thrown");
-        throw new Exception("Fatal: Bot was not in a voice channel when play was called, " +
-                            "and it couldn't join the most crowded channel either," +
-                            "but it threw no exceptions when it was supposed to.");
+        return connection;
     }
 }
