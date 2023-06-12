@@ -3,8 +3,6 @@ namespace MedicBot.Model;
 
 public class LegacyAudioEntry
 {
-    public const string CollectionName = "legacyAudioTracks";
-    
     public enum AudioType
     {
         File,
@@ -12,6 +10,8 @@ public class LegacyAudioEntry
         Youtube,
         Attachment
     }
+
+    public const string CollectionName = "legacyAudioTracks";
 
     public string Name { get; set; }
     public string Extension { get; set; }

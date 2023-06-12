@@ -25,7 +25,8 @@ public static class UserPointsRepository
     public static int GetPoints(ulong userId)
     {
         // TODO Make initial balance configurable
-        var userPoints = Get(userId) ?? AddPoints(userId, SettingsRepository.GetValue<int>(Constants.DefaultScore) * 100);
+        var userPoints = Get(userId) ??
+                         AddPoints(userId, SettingsRepository.GetValue<int>(Constants.DefaultScore) * 100);
         return userPoints.Score;
     }
 
@@ -42,7 +43,8 @@ public static class UserPointsRepository
             currentPoints.Score += score;
         }
 
-        UserPointsCollection.ReplaceOne(p => p.Id == currentPoints.Id, currentPoints, new ReplaceOptions {IsUpsert = true});
+        UserPointsCollection.ReplaceOne(p => p.Id == currentPoints.Id, currentPoints,
+            new ReplaceOptions {IsUpsert = true});
         return currentPoints;
     }
 }

@@ -8,7 +8,6 @@ using DSharpPlus.Lavalink;
 using MedicBot.Commands;
 using MedicBot.EventHandler;
 using MedicBot.Manager;
-using MedicBot.Model;
 using MedicBot.Repository;
 using MedicBot.Utils;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -47,7 +46,7 @@ internal static class Program
                 }
             });
         });
-        builder.Configuration.AddEnvironmentVariables(prefix: "MedicBot_");
+        builder.Configuration.AddEnvironmentVariables("MedicBot_");
         var clientId = Environment.GetEnvironmentVariable(Constants.OAuthClientIdEnvironmentVariableName);
         var clientSecret = Environment.GetEnvironmentVariable(Constants.OAuthClientSecretEnvironmentVariableName);
         if (clientId == null || clientSecret == null)
@@ -72,6 +71,7 @@ internal static class Program
             Log.Error("Failed to read MongoDB configuration from appsettings.json");
             return;
         }
+
         var mongoClientSettings = MongoClientSettings.FromConnectionString(mongoDbSettings.ConnectionString);
         var mongoClient = new MongoClient(mongoClientSettings);
         var mongoDb = mongoClient.GetDatabase(mongoDbSettings.Database);
@@ -181,20 +181,22 @@ internal static class Program
         commands.RegisterConverter(new StringLowercaseConverter());
 
         // Interactivity Init
-        discord.UseInteractivity(new InteractivityConfiguration() 
-        { 
+        discord.UseInteractivity(new InteractivityConfiguration
+        {
             PollBehaviour = PollBehaviour.KeepEmojis,
             Timeout = TimeSpan.FromSeconds(15)
         });
-        
+
         #endregion
 
         // Register events
-        app.Lifetime.ApplicationStopping.Register(async () =>
+        async void CleanupCallback()
         {
             await Cleanup();
             Environment.Exit(0);
-        });
+        }
+
+        app.Lifetime.ApplicationStopping.Register(CleanupCallback);
         discord.VoiceStateUpdated += VoiceStateHandler.DiscordOnVoiceStateUpdated;
         discord.GuildDownloadCompleted += (_, _) =>
         {

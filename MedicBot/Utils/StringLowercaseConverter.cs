@@ -13,6 +13,7 @@ public class StringLowercaseConverter : IArgumentConverter<string>
         {
             return Task.FromResult(Optional.FromValue(value));
         }
+
         return Task.FromResult(Optional.FromValue(value.ToLower(CultureInfo.GetCultureInfo("tr"))));
     }
 }

@@ -42,7 +42,9 @@ public static class Constants
     public const string DefaultScore = "default_score";
 
     public static readonly HashSet<string> ObservedSettingKeys = new() {MinNumberOfUsersNeededToEarnPoints};
-    public static readonly HashSet<string> IntegerSettingKeys = new() {MinNumberOfUsersNeededToEarnPoints, DefaultScore};
+
+    public static readonly HashSet<string>
+        IntegerSettingKeys = new() {MinNumberOfUsersNeededToEarnPoints, DefaultScore};
 
     public static readonly char[] InvalidFileNameChars =
     {

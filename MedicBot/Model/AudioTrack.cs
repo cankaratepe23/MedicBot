@@ -9,7 +9,7 @@ namespace MedicBot.Model;
 public class AudioTrack
 {
     public const string CollectionName = "audioTracks";
-    
+
     private int _price;
 #pragma warning disable CS8618
     public AudioTrack()
@@ -35,6 +35,7 @@ public class AudioTrack
 
     [BsonId(IdGenerator = typeof(ObjectIdGenerator))]
     public ObjectId Id { get; set; }
+
     public string Name { get; set; }
     public List<string> Aliases { get; set; }
     public List<string> Tags { get; set; }

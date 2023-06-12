@@ -17,7 +17,7 @@ public static class AudioManager
     private static string AudioTracksPath { get; set; } = null!;
     private static string TempFilesPath { get; set; } = null!;
 
-    private static Dictionary<ulong, Queue<AudioTrack>> LastPlayedTracks { get; set; } = new();
+    private static Dictionary<ulong, Queue<AudioTrack>> LastPlayedTracks { get; } = new();
 
     public static void Init(DiscordClient client, string tracksPath, string tempFilesPath)
     {
@@ -159,7 +159,7 @@ public static class AudioManager
         return await AudioRepository.FindMany(searchQuery, limit, tag);
     }
 
-    public static async Task<IEnumerable<AudioTrack>> GetNewTracksAsync(long limit = 10)
+    public static IEnumerable<AudioTrack> GetNewTracksAsync(long limit = 10)
     {
         return AudioRepository.GetOrderedByDate(limit);
     }
@@ -167,6 +167,36 @@ public static class AudioManager
     public static IEnumerable<AudioTrack>? GetLastPlayedTracks(DiscordGuild guild)
     {
         return LastPlayedTracks.TryGetValue(guild.Id, out var tracks) ? tracks : null;
+    }
+
+    private static async Task<LavalinkGuildConnection> GetLavalinkConnection(DiscordGuild guild)
+    {
+        var lava = Client.GetLavalink();
+
+        var connection = lava.GetGuildConnection(guild);
+        if (connection == null)
+        {
+            Log.Information("Play was called when bot was not in a voice channel");
+            Log.Information("Trying to join a voice channel");
+            var channelToJoin = guild.Channels.VoiceChannelWithMostNonBotUsers();
+            if (channelToJoin == null)
+            {
+                Log.Warning("JoinGuildIdAsync() couldn't find the most crowded channel in {Guild}", guild);
+                throw new ChannelNotFoundException($"Couldn't find the most crowded channel in {guild}");
+            }
+
+            await JoinAsync(channelToJoin);
+            connection = lava.GetGuildConnection(guild);
+            if (connection == null)
+            {
+                Log.Error("Bot couldn't join the most crowded channel, but no exception was thrown");
+                throw new Exception("Fatal: Bot was not in a voice channel when play was called, " +
+                                    "and it couldn't join the most crowded channel either," +
+                                    "but it threw no exceptions when it was supposed to.");
+            }
+        }
+
+        return connection;
     }
 
     // TODO Add summary docs for everything
@@ -302,7 +332,7 @@ public static class AudioManager
         }
 
         LastPlayedTracks[guild.Id].Enqueue(audioTrack);
-        
+
         await connection.PlayAsync(result.Tracks.FirstOrDefault());
     }
 
@@ -368,34 +398,4 @@ public static class AudioManager
     }
 
     #endregion
-
-    private static async Task<LavalinkGuildConnection> GetLavalinkConnection(DiscordGuild guild)
-    {
-        var lava = Client.GetLavalink();
-
-        var connection = lava.GetGuildConnection(guild);
-        if (connection == null)
-        {
-            Log.Information("Play was called when bot was not in a voice channel");
-            Log.Information("Trying to join a voice channel");
-            var channelToJoin = guild.Channels.VoiceChannelWithMostNonBotUsers();
-            if (channelToJoin == null)
-            {
-                Log.Warning("JoinGuildIdAsync() couldn't find the most crowded channel in {Guild}", guild);
-                throw new ChannelNotFoundException($"Couldn't find the most crowded channel in {guild}");
-            }
-
-            await JoinAsync(channelToJoin);
-            connection = lava.GetGuildConnection(guild);
-            if (connection == null)
-            {
-                Log.Error("Bot couldn't join the most crowded channel, but no exception was thrown");
-                throw new Exception("Fatal: Bot was not in a voice channel when play was called, " +
-                                    "and it couldn't join the most crowded channel either," +
-                                    "but it threw no exceptions when it was supposed to.");
-            }
-        }
-
-        return connection;
-    }
 }

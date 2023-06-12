@@ -1,5 +1,4 @@
-﻿
-using MongoDB.Bson;
+﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson.Serialization.IdGenerators;
 
@@ -21,6 +20,7 @@ public class BotSetting
 
     [BsonId(IdGenerator = typeof(ObjectIdGenerator))]
     public ObjectId? Id { get; set; }
+
     public string? Key { get; set; }
     public object? Value { get; set; }
 }

@@ -47,12 +47,12 @@ public class AudioRepository
                     .Should(Builders<AudioTrack>.Search.Autocomplete(
                         a => a.Name,
                         searchTerm,
-                        fuzzy: new SearchFuzzyOptions() {MaxEdits = 1},
+                        fuzzy: new SearchFuzzyOptions {MaxEdits = 1},
                         score: Builders<AudioTrack>.SearchScore.Boost(3)))
                     .Should(Builders<AudioTrack>.Search.Text(
                         a => a.Name,
                         searchTerm,
-                        fuzzy: new SearchFuzzyOptions() {MaxEdits = 1}))
+                        new SearchFuzzyOptions {MaxEdits = 1}))
             )
             .Limit(limit).ToListAsync();
         return results;
@@ -66,12 +66,12 @@ public class AudioRepository
                     .Should(Builders<AudioTrack>.Search.Autocomplete(
                         a => a.Name,
                         searchTerm,
-                        fuzzy: new SearchFuzzyOptions() {MaxEdits = 1},
+                        fuzzy: new SearchFuzzyOptions {MaxEdits = 1},
                         score: Builders<AudioTrack>.SearchScore.Boost(3)))
                     .Should(Builders<AudioTrack>.Search.Text(
                         a => a.Name,
                         searchTerm,
-                        fuzzy: new SearchFuzzyOptions() {MaxEdits = 1}))
+                        new SearchFuzzyOptions {MaxEdits = 1}))
             )
             .Match(t => t.Tags.Contains(tag))
             .Limit(limit).ToListAsync();
@@ -109,6 +109,7 @@ public class AudioRepository
         {
             return TracksCollection.Find(t => t.Name.Contains(searchTerm)).ToEnumerable();
         }
+
         return TracksCollection.Find(t => t.Name.Contains(searchTerm) && t.Tags.Contains(tag)).ToEnumerable();
     }
 
@@ -118,6 +119,7 @@ public class AudioRepository
         {
             return FindManyAtlas(searchQuery, limit);
         }
+
         return FindManyWithTagAtlas(searchQuery, tag, limit);
     }
 

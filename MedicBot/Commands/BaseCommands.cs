@@ -15,7 +15,8 @@ public class BaseCommands : BaseCommandModule
     public async Task TestCommand(CommandContext ctx, [RemainingText] string remainingText)
     {
         Log.Information("Test command called by {User}", ctx.User);
-        var firstTrack = await MongoDbManager.Database.GetCollection<BsonDocument>("search-test").AsQueryable().FirstOrDefaultAsync();
+        var firstTrack = await MongoDbManager.Database.GetCollection<BsonDocument>("search-test").AsQueryable()
+            .FirstOrDefaultAsync();
         var trackName = firstTrack is null ? "**null**" : firstTrack["Name"];
         await ctx.RespondAsync(trackName.ToString() ?? "**null**");
     }

@@ -148,6 +148,7 @@ public class AudioCommands : BaseCommandModule
                 await ctx.RespondAsync("No matching tracks found");
                 return;
             }
+
             await ctx.Channel.SendPaginatedMessageAsync(ctx.User,
                 ctx.Client.GetInteractivity().GeneratePagesInEmbed(string.Join("\n", matchingTracks)));
         }
@@ -163,7 +164,7 @@ public class AudioCommands : BaseCommandModule
     {
         try
         {
-            var newTracks = await AudioManager.GetNewTracksAsync(limit);
+            var newTracks = AudioManager.GetNewTracksAsync(limit);
             await ctx.Channel.SendPaginatedMessageAsync(ctx.User,
                 ctx.Client.GetInteractivity().GeneratePagesInEmbed(string.Join("\n", newTracks)));
         }
