@@ -1,9 +1,22 @@
-﻿using MedicBot.Utils;
+﻿using DSharpPlus;
+using MedicBot.Utils;
 using Serilog;
 
 namespace MedicBot;
 public static class ImageManager
 {
+    // TODO Remove if unused
+    private static DiscordClient Client { get; set; } = null!;
+    private static string ImagesPath { get; set; } = null!;
+    private static string TempFilesPath { get; set; } = null!;
+
+    public static void Init(DiscordClient client, string imagesPath, string tempFilesPath)
+    {
+        Client = client;
+        ImagesPath = imagesPath;
+        TempFilesPath = tempFilesPath;
+    }
+
     public static async Task AddAsync(string imageName, ulong userId, string url)
     {
         // TODO: De-duplicate this code
@@ -11,7 +24,9 @@ public static class ImageManager
         // File downloader?
         // Some kind of repository interface to call .NameExists() without knowing whether incoming file is AudioTrack or Image.
         // OR : Generic class/methods to do this
-        
+
+        // Maybe don't do any of the above idk
+
         if (!imageName.IsValidFileName())
         {
             Log.Warning("{Filename} has invalid characters", imageName);
