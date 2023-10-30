@@ -1,5 +1,6 @@
 ﻿using MedicBot.Manager;
 using MedicBot.Utils;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using Serilog;
 
@@ -15,8 +16,24 @@ public static class ImageRepository
         Log.Information(Constants.DbCollectionInitializedAudioTracks);
     }
 
-    internal static bool NameExists(string imageName)
+    public static bool NameExists(string name)
     {
-        throw new NotImplementedException();
+        return ImagesCollection.Find(a => a.Name == name).Any();
+    }
+
+    internal static void Add(ReactionImage reactionImage)
+    {
+        ImagesCollection.InsertOne(reactionImage);
+    }
+
+    public static bool Update(ReactionImage reactionImage)
+    {
+        var replaceResult = ImagesCollection.ReplaceOne(a => a.Id == reactionImage.Id, reactionImage);
+        return replaceResult.MatchedCount == 1;
+    }
+
+    public static void Delete(ObjectId id)
+    {
+        ImagesCollection.DeleteOne(t => t.Id == id);
     }
 }

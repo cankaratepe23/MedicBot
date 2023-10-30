@@ -59,5 +59,6 @@ public static class ImageManager
             await stream.CopyToAsync(fileStream);
             await fileStream.FlushAsync();
         }
+        ImageRepository.Add(new ReactionImage() {Name = imageName, Path = filePath, OwnerId = userId});
     }
 }
