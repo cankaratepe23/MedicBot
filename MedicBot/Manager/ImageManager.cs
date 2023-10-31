@@ -1,5 +1,6 @@
 ﻿using DSharpPlus;
 using ImageMagick;
+using MedicBot.Exceptions;
 using MedicBot.Utils;
 using Serilog;
 
@@ -75,7 +76,7 @@ public static class ImageManager
             File.Delete(originalFilePath);
         }
 
-        ImageRepository.Add(new ReactionImage() {Name = imageName, Path = filePath, OwnerId = userId});
+        ImageRepository.Add(new ReactionImage() { Name = imageName, Path = filePath, OwnerId = userId });
     }
 
     private static string ConvertImage(string imagePath)
@@ -99,5 +100,53 @@ public static class ImageManager
                 $"No image was found with name: {imageName}");
         }
         return File.OpenRead(image.Path);
+    }
+
+    public static async Task<string> DeleteAsync(string imageName, ulong userId)
+    {
+        var image = ImageRepository.FindByNameExact(imageName);
+        if (image == null)
+        {
+            Log.Warning("No image was found with name: {Name}", imageName);
+            throw new ImageNotFoundException(
+                $"No image was found with name: {imageName}");
+        }
+        if (image.OwnerId != userId && Client.CurrentUser.Id != userId)
+        {
+            Log.Warning("A non-owner or non-admin user {UserId} attempted deleting the following image: {@Image}",
+                userId, image);
+            var user = await Client.GetUserAsync(userId);
+            if (user != null)
+            {
+                Log.Warning("Offending user of the unauthorized delete operation: {User}", user);
+            }
+
+            throw new UnauthorizedException("You need to be the owner of this reaction image to delete it.");
+        }
+
+        ImageRepository.Delete(image.Id);
+        File.Delete(image.Path);
+
+        return GetRandomDeletionResponse();
+    }
+
+    private static string GetRandomDeletionResponse()
+    {
+        // TODO Move this somewhere better
+        var responses = new string[]
+        {
+            "Poof! Deleted this masterpiece.",
+            "Oopsie-doodle! That picture's now in the digital Bermuda Triangle.",
+            "And just like that, the vanishing act of the century! Ta-da, it's gone!",
+            "Say goodbye to the pixelated phantom - it has officially vanished!",
+            "Deleted! If only Houdini could make files disappear as swiftly as I can.",
+            "Out of sight, out of bytes - Abracadabra, it's history!",
+            "Who needs a magic wand when you've got a delete button? Poof, gone!",
+            "The delete button's my secret weapon - Shazam! Empty space!",
+            "Picture, picture on the screen, who's the deleted one? Oh, it's you!",
+            "That image just joined the ranks of 'Gone but not forgotten... because I have no backup!'",
+            "Deleted in 3... 2... 1! Don't worry; I didn't call NASA for this mission."
+    };
+        return responses[new Random().Next(responses.Length)];
     }
 }
