@@ -16,6 +16,11 @@ public static class ImageRepository
         Log.Information(Constants.DbCollectionInitializedAudioTracks);
     }
 
+    public static ReactionImage? FindByNameExact(string name)
+    {
+        return ImagesCollection.Find(a => a.Name == name).FirstOrDefault();
+    }
+
     public static bool NameExists(string name)
     {
         return ImagesCollection.Find(a => a.Name == name).Any();

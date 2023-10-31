@@ -1,4 +1,5 @@
 ﻿using DSharpPlus;
+using ImageMagick;
 using MedicBot.Utils;
 using Serilog;
 
@@ -64,6 +65,39 @@ public static class ImageManager
             await stream.CopyToAsync(fileStream);
             await fileStream.FlushAsync();
         }
+
+        if (new FileInfo(filePath).Length > 500 * 1024)
+        {
+            Log.Information("File size larger than 500KB, converting to WebP");
+            var originalFilePath = filePath;
+            filePath = ConvertImage(originalFilePath);
+            Log.Information("Deleting original file");
+            File.Delete(originalFilePath);
+        }
+
         ImageRepository.Add(new ReactionImage() {Name = imageName, Path = filePath, OwnerId = userId});
+    }
+
+    private static string ConvertImage(string imagePath)
+    {
+        var imageName = imagePath[..imagePath.IndexOf('.')];
+        var newImagePath = imageName + ".webp";
+        using var magick = new MagickImage(imagePath);
+        magick.Quality = 95;
+        magick.WriteAsync(newImagePath);
+        return newImagePath;
+    }
+
+    public static FileStream GetAsync(string imageName)
+    {
+        // TODO Switch to fuzzy search for regular strings, keep exact search for quoted (" ") strings
+        var image = ImageRepository.FindByNameExact(imageName);
+        if (image == null)
+        {
+            Log.Warning("No image was found with name: {Name}", imageName);
+            throw new ImageNotFoundException(
+                $"No image was found with name: {imageName}");
+        }
+        return File.OpenRead(image.Path);
     }
 }
