@@ -33,6 +33,11 @@ public static class ImageManager
             throw new ArgumentException($"Filename: {imageName} has invalid characters.");
         }
 
+        if (url.IndexOf('?') != -1)
+        {
+            url = url[..url.IndexOf('?')];
+        }
+
         if (url.LastIndexOf('.') == -1 || string.IsNullOrWhiteSpace(url[url.LastIndexOf('.')..]))
         {
             Log.Warning("Discord attachment doesn't have a file extension");
