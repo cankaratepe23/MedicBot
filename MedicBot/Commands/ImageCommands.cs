@@ -5,7 +5,7 @@ using MedicBot.Utils;
 namespace MedicBot;
 
 [Group("image")]
-public class ImageReplyCommands : BaseCommandModule
+public class ImageCommands : BaseCommandModule
 {
     [Command("add")]
     public async Task AddCommand(CommandContext ctx, [RemainingText] string imageName)
