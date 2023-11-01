@@ -21,13 +21,15 @@ public static class ImageManager
 
     public static async Task AddAsync(string imageName, ulong userId, string url)
     {
-        // TODO: De-duplicate this code
+        // TODO: De-duplicate this code (see FindAync as well)
         // Middleware/pre-processor to handle incoming files?
         // File downloader?
         // Some kind of repository interface to call .NameExists() without knowing whether incoming file is AudioTrack or Image.
-        // OR : Generic class/methods to do this
+        // OR : Generic class/methods to do this (Maybe consider this first?)
 
         // Maybe don't do any of the above idk
+
+        // Same duplication occurs in Repository classes as well, so maybe extract common methods into "base" repository. Or completely make the repository classes generic.
 
         if (!imageName.IsValidFileName())
         {
@@ -89,20 +91,54 @@ public static class ImageManager
         return newImagePath;
     }
 
-    public static FileStream GetAsync(string imageName)
+    public static async Task<IEnumerable<ReactionImage>> FindAsync(string searchQuery, long limit = 10)
     {
-        // TODO Switch to fuzzy search for regular strings, keep exact search for quoted (" ") strings
-        var image = ImageRepository.FindByNameExact(imageName);
+        string? tag = null;
+        searchQuery = searchQuery.Trim();
+        if (searchQuery.Contains(':'))
+        {
+            var splitQuery = searchQuery.Split(':');
+            tag = splitQuery[0];
+            searchQuery = splitQuery[1].Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(searchQuery) || searchQuery == "?")
+        {
+            if (limit == 1)
+            {
+                var randomImage = await ImageRepository.Random(tag);
+                return new List<ReactionImage> {randomImage};
+            }
+
+            return ImageRepository.All(tag);
+        }
+
+        if (searchQuery.StartsWith('\"') && searchQuery.EndsWith('"'))
+        {
+            return ImageRepository.FindAllByName(searchQuery.Trim('"'), tag);
+        }
+
+        return await ImageRepository.FindMany(searchQuery, limit, tag);
+    }
+
+    public static async Task<FileStream> FindAndOpenAsync(string imageName)
+    {
+        var image = (await FindAsync(imageName)).FirstOrDefault();
         if (image == null)
         {
             Log.Warning("No image was found with name: {Name}", imageName);
             throw new ImageNotFoundException(
                 $"No image was found with name: {imageName}");
         }
+        return OpenImage(image);
+    }
+
+    public static FileStream OpenImage(ReactionImage image)
+    {
         return File.OpenRead(image.Path);
     }
 
-    public static async Task<string> DeleteAsync(string imageName, ulong userId)
+    public static ReactionImage FindExact(string imageName)
     {
         var image = ImageRepository.FindByNameExact(imageName);
         if (image == null)
@@ -111,6 +147,12 @@ public static class ImageManager
             throw new ImageNotFoundException(
                 $"No image was found with name: {imageName}");
         }
+
+        return image;
+    }
+
+    public static async Task<string> DeleteAsync(ReactionImage image, ulong userId)
+    {
         if (image.OwnerId != userId && Client.CurrentUser.Id != userId)
         {
             Log.Warning("A non-owner or non-admin user {UserId} attempted deleting the following image: {@Image}",
@@ -128,6 +170,12 @@ public static class ImageManager
         File.Delete(image.Path);
 
         return GetRandomDeletionResponse();
+    }
+
+    public static async Task<string> DeleteAsync(string imageName, ulong userId)
+    {
+        var image = FindExact(imageName);
+        return await DeleteAsync(image, userId);
     }
 
     private static string GetRandomDeletionResponse()

@@ -9,9 +9,14 @@ public class ReactionImage
 
     [BsonId(IdGenerator = typeof(ObjectIdGenerator))]
     public ObjectId Id { get; set; }
-    public string Name { get; set; }
-    public List<string> Aliases { get; set; }
-    public List<string> Tags { get; set; }
-    public string Path { get; set; }
+    public required string Name { get; set; }
+    public List<string> Aliases { get; set; } = new();
+    public List<string> Tags { get; set; } = new();
+    public required string Path { get; set; }
     public ulong OwnerId { get; set; }
+
+    public override string ToString()
+    {
+        return (Tags.Count != 0 ? Tags.FirstOrDefault() + ":" : "") + Name;
+    }
 }

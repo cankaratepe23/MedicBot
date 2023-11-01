@@ -34,6 +34,7 @@ public static class Constants
     public const string NotConnectedToVoiceMessage = "Not connected to any channel.";
 
     public const string DbCollectionInitializedAudioTracks = "AudioTrack collection initialized";
+    public const string DbCollectionInitializedReactionImages = "ReactionImage collection initialized";
     public const string DbCollectionInitializedBotSettings = "BotSetting collection initialized";
     public const string DbCollectionInitializedUserPoints = "UserPoints collection initialized";
     public const string DbCollectionInitializedUserMutes = "UserMute collection initialized";
