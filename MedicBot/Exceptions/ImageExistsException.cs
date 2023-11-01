@@ -1,6 +1,4 @@
-﻿using System.Runtime.Serialization;
-
-namespace MedicBot;
+﻿namespace MedicBot;
 public class ImageExistsException : Exception
 {
     public ImageExistsException()
