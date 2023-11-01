@@ -34,6 +34,11 @@ public static class AudioManager
             throw new ArgumentException($"Filename: {audioName} has invalid characters.");
         }
 
+        if (url.IndexOf('?') != -1)
+        {
+            url = url[..url.IndexOf('?')];
+        }
+
         if (url.LastIndexOf('.') == -1 || string.IsNullOrWhiteSpace(url[url.LastIndexOf('.')..]))
         {
             Log.Warning("Discord attachment doesn't have a file extension");
@@ -67,10 +72,6 @@ public static class AudioManager
         {
             Log.Information("Extracting 7z...");
             var filesDirectory = string.Join('/', TempFilesPath, audioName);
-            if (!Directory.Exists(filesDirectory))
-            {
-                Directory.CreateDirectory(filesDirectory);
-            }
 
             using (var archive = SevenZipArchive.Open(filePath))
             using (var reader = archive.ExtractAllEntries())
@@ -94,6 +95,7 @@ public static class AudioManager
 
                 AudioRepository.Add(new AudioTrack(newAudioName, newFilePath, userId));
             }
+            // TODO? Delete .7z file after done
         }
         else
         {

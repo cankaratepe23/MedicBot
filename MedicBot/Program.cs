@@ -152,11 +152,18 @@ internal static class Program
         // Ensure tracks folder exists
         Log.Information("Checking initial directories");
         var audioTracksPath = Constants.AudioTracksPath;
+        var imagesPath = Constants.ImagesPath;
         var tempFilesPath = Constants.TempFilesPath;
         if (!Directory.Exists(audioTracksPath))
         {
             Log.Information("Creating {DirectoryPath}", audioTracksPath);
             Directory.CreateDirectory(audioTracksPath);
+        }
+
+        if (!Directory.Exists(imagesPath))
+        {
+            Log.Information("Creating {DirectoryPath}", imagesPath);
+            Directory.CreateDirectory(imagesPath);
         }
 
         if (!Directory.Exists(tempFilesPath))
@@ -166,6 +173,7 @@ internal static class Program
         }
 
         AudioManager.Init(discord, audioTracksPath, tempFilesPath);
+        ImageManager.Init(discord, imagesPath, tempFilesPath);
         VoiceStateHandler.Init(discord);
 
         // Commands Init
@@ -176,6 +184,7 @@ internal static class Program
         });
         commands.RegisterCommands<BaseCommands>();
         commands.RegisterCommands<AudioCommands>();
+        commands.RegisterCommands<ImageCommands>();
         commands.RegisterCommands<SettingsCommands>();
         commands.RegisterCommands<ImportExportCommands>();
         commands.RegisterConverter(new StringLowercaseConverter());

@@ -105,6 +105,7 @@ public class AudioRepository
 
     public static IEnumerable<AudioTrack> FindAllByName(string searchTerm, string? tag = null)
     {
+        // Check if this method should "ignore" limits from Manager class
         if (string.IsNullOrWhiteSpace(tag))
         {
             return TracksCollection.Find(t => t.Name.Contains(searchTerm)).ToEnumerable();

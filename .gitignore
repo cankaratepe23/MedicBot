@@ -6,5 +6,7 @@ riderModule.iml
 *.db
 res/
 MedicBot/res/
+img/
+MedicBot/img/
 *.json
 run.sh
