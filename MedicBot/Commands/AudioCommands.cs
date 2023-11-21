@@ -40,6 +40,7 @@ public class AudioCommands : BaseCommandModule
     }
 
     [Command("leave")]
+    [Aliases("dc")]
     public async Task LeaveCommand(CommandContext ctx)
     {
         try
