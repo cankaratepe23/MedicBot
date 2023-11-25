@@ -129,7 +129,7 @@ public static class AudioManager
         File.Delete(audioTrack.Path);
     }
 
-    public static async Task<IEnumerable<AudioTrack>> FindAsync(string searchQuery, long limit = 10)
+    public static async Task<IEnumerable<AudioTrack>> FindAsync(string searchQuery, long limit = 10, DiscordGuild? guild = null)
     {
         // TODO Allow searching by ID with a special prefix or something
 
@@ -151,6 +151,12 @@ public static class AudioManager
             }
 
             return AudioRepository.All(tag);
+        }
+
+        if (searchQuery == "!!" && guild != null)
+        {
+            var previousTrack = GetLastPlayedTracks(guild)?.FirstOrDefault();
+            return previousTrack == null ? new List<AudioTrack>() : new List<AudioTrack> {previousTrack};
         }
 
         if (searchQuery.StartsWith('\"') && searchQuery.EndsWith('"'))
@@ -381,7 +387,7 @@ public static class AudioManager
         /* var audioTrack = searchById
             ? AudioRepository.FindById(audioName)
             : AudioRepository.FindByName(audioName); */
-        var audioTrack = (await FindAsync(audioName, 1)).FirstOrDefault();
+        var audioTrack = (await FindAsync(audioName, 1, guild)).FirstOrDefault();
         if (audioTrack == null)
         {
             Log.Warning("No track was found with {IdOrName}: {Id}", searchById ? "ID" : "name", audioName);
