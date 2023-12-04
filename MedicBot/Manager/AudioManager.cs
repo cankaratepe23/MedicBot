@@ -174,7 +174,7 @@ public static class AudioManager
 
     public static IEnumerable<AudioTrack>? GetLastPlayedTracks(DiscordGuild guild)
     {
-        return LastPlayedTracks.TryGetValue(guild.Id, out var tracks) ? tracks : null;
+        return LastPlayedTracks.TryGetValue(guild.Id, out var tracks) ? tracks.Reverse() : null;
     }
 
     private static async Task<LavalinkGuildConnection> GetLavalinkConnection(DiscordGuild guild)
