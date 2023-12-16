@@ -12,6 +12,7 @@ using MedicBot.Manager;
 using MedicBot.Repository;
 using MedicBot.Utils;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.HttpOverrides;
 using MongoDB.Driver;
 using Serilog;
 
@@ -55,6 +56,11 @@ internal static class Program
         {
             throw new InvalidOperationException("Discord OAuth environment variables are not set.");
         }
+
+        builder.Services.Configure<ForwardedHeadersOptions>(options =>
+        {
+            options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        });
 
         _ = DiscordAuthenticationDefaults.CallbackPath;
         builder.Services.AddAuthentication(options =>
@@ -102,6 +108,8 @@ internal static class Program
             app.UseSwagger();
             app.UseSwaggerUI();
         }
+
+        app.UseForwardedHeaders();
 
         app.UseHttpsRedirection();
 
