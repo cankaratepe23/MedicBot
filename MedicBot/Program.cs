@@ -107,6 +107,11 @@ internal static class Program
 
         app.UseCors("MedicBotPolicy");
 
+        app.UseCookiePolicy(new CookiePolicyOptions
+        {
+            MinimumSameSitePolicy = SameSiteMode.None
+        });
+
         app.UseAuthentication();
 
         app.UseAuthorization();
