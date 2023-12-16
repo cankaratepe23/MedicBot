@@ -1,3 +1,4 @@
+using System.Net;
 using AspNet.Security.OAuth.Discord;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
@@ -58,7 +59,15 @@ internal static class Program
         builder.Services.AddAuthentication(options =>
             {
                 options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-            }).AddCookie()
+            }).AddCookie(options =>
+            {
+                options.LoginPath = "/Auth/TestLogin";
+                options.Events.OnRedirectToLogin = context =>
+                {
+                    context.Response.StatusCode = (int) HttpStatusCode.Unauthorized;
+                    return Task.CompletedTask;
+                };
+            })
             .AddDiscord(options =>
             {
                 options.ClientId = clientId;
