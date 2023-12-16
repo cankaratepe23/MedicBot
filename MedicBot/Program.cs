@@ -41,6 +41,7 @@ internal static class Program
         {
             options.AddPolicy("MedicBotPolicy", policyBuilder =>
             {
+                policyBuilder.WithOrigins("https://medicbot.comaristan.cf");
                 if (builder.Environment.IsDevelopment())
                 {
                     policyBuilder.WithOrigins("http://localhost:3000");
