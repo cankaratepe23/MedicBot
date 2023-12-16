@@ -68,6 +68,7 @@ internal static class Program
                     context.Response.StatusCode = (int) HttpStatusCode.Unauthorized;
                     return Task.CompletedTask;
                 };
+                options.Cookie.SameSite = SameSiteMode.None;
             })
             .AddDiscord(options =>
             {
