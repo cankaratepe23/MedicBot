@@ -147,7 +147,7 @@ public static class AudioManager
             if (limit == 1)
             {
                 var randomTrack = await AudioRepository.Random(tag);
-                return new List<AudioTrack> {randomTrack};
+                return new List<AudioTrack> { randomTrack };
             }
 
             return AudioRepository.All(tag);
@@ -156,7 +156,7 @@ public static class AudioManager
         if (searchQuery == "!!" && guild != null)
         {
             var previousTrack = GetLastPlayedTracks(guild)?.FirstOrDefault();
-            return previousTrack == null ? new List<AudioTrack>() : new List<AudioTrack> {previousTrack};
+            return previousTrack == null ? new List<AudioTrack>() : new List<AudioTrack> { previousTrack };
         }
 
         if (searchQuery.StartsWith('\"') && searchQuery.EndsWith('"'))
@@ -384,10 +384,9 @@ public static class AudioManager
             }
         }
 
-        /* var audioTrack = searchById
+        var audioTrack = searchById
             ? AudioRepository.FindById(audioName)
-            : AudioRepository.FindByName(audioName); */
-        var audioTrack = (await FindAsync(audioName, 1, guild)).FirstOrDefault();
+            : (await FindAsync(audioName, 1, guild)).FirstOrDefault();
         if (audioTrack == null)
         {
             Log.Warning("No track was found with {IdOrName}: {Id}", searchById ? "ID" : "name", audioName);
@@ -398,10 +397,11 @@ public static class AudioManager
         await PlayAsync(audioTrack, guild, member);
     }
 
-    public static async Task PlayAsync(string audioNameOrId, ulong guildId, DiscordMember member,
+    public static async Task PlayAsync(string audioNameOrId, ulong guildId, ulong memberId,
         bool searchById = false)
     {
         var guild = Client.FindGuild(guildId);
+        var member = guild.Members[memberId];
         await PlayAsync(audioNameOrId, guild, member, searchById);
     }
 
