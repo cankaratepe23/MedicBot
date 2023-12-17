@@ -80,6 +80,7 @@ internal static class Program
             {
                 options.ClientId = clientId;
                 options.ClientSecret = clientSecret;
+                options.CallbackPath = "https://api.medicbot.comaristan.cf/signin-discord";
             });
 
         var mongoDbSettings = builder.Configuration.GetSection("MongoDb").Get<MongoDbSettings>();
