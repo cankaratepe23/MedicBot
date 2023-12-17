@@ -80,7 +80,8 @@ internal static class Program
             {
                 options.ClientId = clientId;
                 options.ClientSecret = clientSecret;
-                options.CallbackPath = "https://api.medicbot.comaristan.cf/signin-discord";
+                options.CorrelationCookie.SameSite = SameSiteMode.None;
+                options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
             });
 
         var mongoDbSettings = builder.Configuration.GetSection("MongoDb").Get<MongoDbSettings>();
@@ -118,7 +119,8 @@ internal static class Program
 
         app.UseCookiePolicy(new CookiePolicyOptions
         {
-            MinimumSameSitePolicy = SameSiteMode.None
+            MinimumSameSitePolicy = SameSiteMode.None,
+            Secure = CookieSecurePolicy.Always
         });
 
         app.UseAuthentication();
