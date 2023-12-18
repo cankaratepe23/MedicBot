@@ -1,6 +1,7 @@
 ﻿using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.Lavalink;
+using DSharpPlus.Lavalink.EventArgs;
 using MedicBot.Exceptions;
 using MedicBot.Model;
 using MedicBot.Repository;
@@ -342,6 +343,8 @@ public static class AudioManager
         LastPlayedTracks[guild.Id].Enqueue(audioTrack);
 
         await connection.PlayAsync(result.Tracks.FirstOrDefault());
+
+        UserManager.DeductPoints(member, audioTrack.Price);
     }
 
     public static async Task PlayAsync(Uri audioUrl, DiscordGuild guild, DiscordMember member)

@@ -7,15 +7,26 @@ namespace MedicBot.Manager;
 
 public static class UserManager
 {
-    public static void AddPoints(DiscordUser member, int score)
+    public static void AddPoints(DiscordUser member, int points)
     {
-        UserPointsRepository.AddPoints(member.Id, score);
-        Log.Debug("Added {Points} points to {Member}", score, member);
+        UserPointsRepository.AddPoints(member.Id, points);
+        Log.Debug("Added {Points} points to {Member}", points, member);
     }
 
     public static void AddPoints(DiscordUser member, TimeSpan time)
     {
         AddPoints(member, (int) Math.Floor(time.TotalSeconds));
+    }
+
+    public static void DeductPoints(DiscordUser member, int points)
+    {
+        UserPointsRepository.AddPoints(member.Id, (-1) * points);
+        Log.Debug("Removed {Points} points from {Member}", points, member);
+    }
+
+    public static void DeductPoints(DiscordUser member, TimeSpan time)
+    {
+        DeductPoints(member, (int) Math.Floor(time.TotalSeconds));
     }
 
     public static bool IsMuted(DiscordUser member)
