@@ -90,6 +90,12 @@ public class AudioController : ControllerBase
     {
         try
         {
+            var lastUpdate = AudioManager.GetNewTracksAsync(1).FirstOrDefault()?.Id.Timestamp;
+            if (lastUpdate != null)
+            {
+                Response.Headers.LastModified = DateTimeOffset.FromUnixTimeSeconds((long)lastUpdate).ToHttpDate();
+            }
+
             return Ok(AudioRepository.All().Select(t => t.ToDto()));
         }
         catch (Exception e)

@@ -118,4 +118,9 @@ public static class Extensions
 
         return sb.ToString().Trim();
     }
+
+    public static string ToHttpDate(this DateTimeOffset dateTime)
+    {
+        return dateTime.ToString("r");
+    }
 }
