@@ -15,6 +15,11 @@ public static class UserManager
         Log.Debug("Added {Points} points to {Member}", points, member);
     }
 
+    public static int GetPoints(DiscordUser user)
+    {
+        return UserPointsRepository.GetPoints(user.Id);
+    }
+
     public static void AddPoints(DiscordUser member, TimeSpan time)
     {
         AddPoints(member, (int) Math.Floor(time.TotalSeconds));

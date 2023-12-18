@@ -4,6 +4,7 @@ using DSharpPlus.Entities;
 using DSharpPlus.Interactivity.Extensions;
 using MedicBot.Exceptions;
 using MedicBot.Manager;
+using MedicBot.Repository;
 using MedicBot.Utils;
 
 namespace MedicBot.Commands;
@@ -200,5 +201,20 @@ public class AudioCommands : BaseCommandModule
             await ctx.RespondAsync(e.Message);
             throw;
         }
+    }
+
+    [Command("balance")]
+    [Aliases("puan", "points")]
+    public async Task BalanceCommand(CommandContext ctx, DiscordMember? member)
+    {
+        if (member == null)
+        {
+            member = (DiscordMember) ctx.User;
+        }
+
+        var memberPoints = UserManager.GetPoints(member);
+        var defaultPrice = SettingsRepository.GetValue<double>(Constants.DefaultScore);
+
+        await ctx.RespondAsync($"You have {memberPoints} points, which means you can play around {Math.Floor(memberPoints / defaultPrice)} tracks.");
     }
 }
