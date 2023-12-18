@@ -6,6 +6,7 @@ using MedicBot.Exceptions;
 using MedicBot.Manager;
 using MedicBot.Repository;
 using MedicBot.Utils;
+using ZstdSharp.Unsafe;
 
 namespace MedicBot.Commands;
 
@@ -205,15 +206,15 @@ public class AudioCommands : BaseCommandModule
 
     [Command("balance")]
     [Aliases("puan", "points")]
-    public async Task BalanceCommand(CommandContext ctx, DiscordMember? member)
+    public async Task BalanceCommand(CommandContext ctx, DiscordMember? member = null)
     {
         if (member == null)
         {
             member = (DiscordMember) ctx.User;
         }
 
-        var memberPoints = UserManager.GetPoints(member);
-        var defaultPrice = SettingsRepository.GetValue<double>(Constants.DefaultScore);
+        var memberPoints = Convert.ToDouble(UserManager.GetPoints(member));
+        var defaultPrice = SettingsRepository.GetValue<int>(Constants.DefaultScore);
 
         await ctx.RespondAsync($"You have {memberPoints} points, which means you can play around {Math.Floor(memberPoints / defaultPrice)} tracks.");
     }
