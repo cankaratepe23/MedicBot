@@ -1,7 +1,6 @@
 ﻿using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.Lavalink;
-using DSharpPlus.Lavalink.EventArgs;
 using MedicBot.Exceptions;
 using MedicBot.Model;
 using MedicBot.Repository;
@@ -307,10 +306,11 @@ public static class AudioManager
 
     public static async Task PlayAsync(AudioTrack audioTrack, DiscordGuild guild, DiscordMember member)
     {
-        if (!UserManager.CanPlayAudio(member, audioTrack))
+        if (!UserManager.CanPlayAudio(member, audioTrack, out var reason))
         {
             Log.Warning("{Member} can not play the audio {AudioTrack}", member, audioTrack);
-            throw new UnauthorizedException($"{member} can not play the audio {audioTrack}");
+            Log.Warning("Reason: {Reason}", reason);
+            throw new UnauthorizedException($"{member} can not play the audio {audioTrack}", new UnauthorizedException(reason));
         }
 
         var connection = await GetLavalinkConnection(guild);

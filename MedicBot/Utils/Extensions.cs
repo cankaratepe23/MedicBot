@@ -1,4 +1,5 @@
-﻿using DSharpPlus;
+﻿using System.Text;
+using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using MedicBot.Exceptions;
@@ -93,7 +94,28 @@ public static class Extensions
     {
         return new AudioTrackDto
         {
-            Id = audioTrack.Id.ToString(), Name = audioTrack.Name, Aliases = audioTrack.Aliases, Tags = audioTrack.Tags
+            Id = audioTrack.Id.ToString(),
+            Name = audioTrack.Name,
+            Aliases = audioTrack.Aliases,
+            Tags = audioTrack.Tags
         };
+    }
+
+    public static string ToPrettyString(this TimeSpan span)
+    {
+
+        if (span == TimeSpan.Zero) return "0 seconds";
+
+        var sb = new StringBuilder();
+        if (span.Days > 0)
+            sb.AppendFormat("{0} day{1} ", span.Days, span.Days > 1 ? "s" : String.Empty);
+        if (span.Hours > 0)
+            sb.AppendFormat("{0} hour{1} ", span.Hours, span.Hours > 1 ? "s" : String.Empty);
+        if (span.Minutes > 0)
+            sb.AppendFormat("{0} minute{1} ", span.Minutes, span.Minutes > 1 ? "s" : String.Empty);
+        if (span.Seconds > 0)
+            sb.AppendFormat("{0} second{1}", span.Seconds, span.Seconds > 1 ? "s" : String.Empty);
+
+        return sb.ToString().Trim();
     }
 }

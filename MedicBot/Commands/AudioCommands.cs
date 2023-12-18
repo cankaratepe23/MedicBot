@@ -135,6 +135,10 @@ public class AudioCommands : BaseCommandModule
         {
             await ctx.RespondAsync($"Lavalink failed to load the track with error: {e.Message}");
         }
+        catch (UnauthorizedException e)
+        {
+            await ctx.RespondAsync($"You cannot play this audio right now. {e.InnerException?.Message}".Trim());
+        }
     }
 
     [Command("list")]

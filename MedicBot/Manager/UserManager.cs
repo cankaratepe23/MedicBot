@@ -1,6 +1,8 @@
-﻿using DSharpPlus.Entities;
+﻿using System.Text;
+using DSharpPlus.Entities;
 using MedicBot.Model;
 using MedicBot.Repository;
+using MedicBot.Utils;
 using Serilog;
 
 namespace MedicBot.Manager;
@@ -60,8 +62,31 @@ public static class UserManager
         return false;
     }
 
-    public static bool CanPlayAudio(DiscordMember member, AudioTrack audioTrack)
+    public static bool CanPlayAudio(DiscordMember member, AudioTrack audioTrack, out string reason)
     {
-        return UserPointsRepository.GetPoints(member.Id) >= audioTrack.Price && !IsMuted(member);
+        var userPoints = UserPointsRepository.GetPoints(member.Id);
+        var trackPrice = audioTrack.Price;
+
+        var userHasEnoughPoints = userPoints >= trackPrice;
+        var userIsNotMuted = !IsMuted(member);
+
+        var reasonBuilder = new StringBuilder();
+        if (!userHasEnoughPoints)
+        {
+            reasonBuilder.Append($"You don't have enough points to play this audio. (You have: {userPoints}, you need: {trackPrice})");
+        }
+        if (!userHasEnoughPoints && !userIsNotMuted)
+        {
+            reasonBuilder.Append(" AND ");
+        }
+        if (!userIsNotMuted)
+        {
+            var muteEndDateTime = UserMuteRepository.GetEndDateTime(member.Id);
+            var muteRemaining = muteEndDateTime - DateTime.UtcNow;
+            reasonBuilder.Append($"You are currently muted for the next {muteRemaining.ToPrettyString()}");
+        }
+
+        reason = reasonBuilder.ToString();
+        return userHasEnoughPoints && userIsNotMuted;
     }
 }
