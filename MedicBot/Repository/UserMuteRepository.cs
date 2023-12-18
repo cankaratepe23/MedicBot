@@ -28,6 +28,11 @@ public static class UserMuteRepository
         return UserMuteCollection.Find(p => p.Id == userId).FirstOrDefault().EndDateTime;
     }
 
+    public static async void Set(ulong userId, DateTime endTime)
+    {
+        await UserMuteCollection.ReplaceOneAsync(d => d.Id == userId, new UserMute(userId, endTime), new ReplaceOptions {IsUpsert = true});
+    }
+
     public static void Delete(ulong userId)
     {
         UserMuteCollection.DeleteMany(u => u.Id == userId);

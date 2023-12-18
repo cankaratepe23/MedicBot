@@ -29,6 +29,19 @@ public static class UserManager
         DeductPoints(member, (int) Math.Floor(time.TotalSeconds));
     }
 
+    public static void Mute(DiscordMember member, int minutes)
+    {
+        var userMute = UserMuteRepository.Get(member.Id);
+        if (userMute == null)
+        {
+            UserMuteRepository.Set(member.Id, DateTime.UtcNow.AddMinutes(minutes));
+        }
+        else
+        {
+            UserMuteRepository.Set(member.Id, userMute.EndDateTime.AddMinutes(minutes));
+        }
+    }
+
     public static bool IsMuted(DiscordUser member)
     {
         var userMute = UserMuteRepository.Get(member.Id);
