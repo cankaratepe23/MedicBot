@@ -60,17 +60,12 @@ public class AudioController : ControllerBase
         return Ok();
     }
 
-    [HttpGet("Play/{guildId}")]
+    [HttpGet("Play/{guildId}")] // TODO Play/audioId & guild ID from query instead
     [Authorize]
     public async Task<IActionResult> Play(ulong guildId, [FromQuery] string audioNameOrId,
         [FromQuery] bool searchById = false)
     {
-        var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
-        if (userClaim is null)
-        {
-            throw new InvalidCredentialException();
-        }
-
+        var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
         Log.Debug("User's ID is: {UserId}", userClaim.Value);
         try
         {
@@ -97,6 +92,32 @@ public class AudioController : ControllerBase
             }
 
             return Ok(AudioRepository.All().Select(t => t.ToDto()));
+        }
+        catch (Exception e)
+        {
+            return BadRequest(e.Message);
+        }
+    }
+
+    [HttpGet("{audioId}")]
+    [Authorize]
+    public IActionResult Get(string audioId, [FromQuery] ulong guildId)
+    {
+        try
+        {
+            var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
+            Log.Debug("User's ID is: {UserId}", userClaim.Value);
+            
+            var track = AudioManager.FindById(audioId) ?? throw new AudioTrackNotFoundException($"No track was found with ID: {audioId}");
+            var lastUpdate = track.Id.Timestamp;
+            Response.Headers.LastModified = DateTimeOffset.FromUnixTimeSeconds(lastUpdate).ToHttpDate();
+
+            var file = System.IO.File.OpenRead(track.Path);
+            return Ok(file);
+        }
+        catch (AudioTrackNotFoundException e)
+        {
+            return NotFound(e.Message);
         }
         catch (Exception e)
         {

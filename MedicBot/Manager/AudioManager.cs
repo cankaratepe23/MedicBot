@@ -131,8 +131,6 @@ public static class AudioManager
 
     public static async Task<IEnumerable<AudioTrack>> FindAsync(string searchQuery, long limit = 10, DiscordGuild? guild = null)
     {
-        // TODO Allow searching by ID with a special prefix or something
-
         string? tag = null;
         searchQuery = searchQuery.Trim();
         if (searchQuery.Contains(':'))
@@ -165,6 +163,11 @@ public static class AudioManager
         }
 
         return await AudioRepository.FindMany(searchQuery, limit, tag);
+    }
+
+    public static AudioTrack? FindById(string id)
+    {
+        return AudioRepository.FindById(id);
     }
 
     public static IEnumerable<AudioTrack> GetNewTracksAsync(long limit = 10)
