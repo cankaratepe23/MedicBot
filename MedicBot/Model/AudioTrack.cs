@@ -18,7 +18,7 @@ public class AudioTrack
     }
 
     public AudioTrack(string name, string path, ulong ownerId) : this(name, new List<string>(), new List<string>(),
-        path, ownerId, 10)
+        path, ownerId, -1)
     {
     }
 
@@ -41,6 +41,7 @@ public class AudioTrack
     public List<string> Tags { get; set; }
     public string Path { get; set; }
     public ulong OwnerId { get; set; }
+    public DateTime? LastModifiedAt { get; set; }
 
     public int Price
     {

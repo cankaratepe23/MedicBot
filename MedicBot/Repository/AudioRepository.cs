@@ -155,13 +155,23 @@ public class AudioRepository
             .ToList();
     }
 
+    public static List<AudioTrack> GetOrderedByModified(long limit)
+    {
+        return TracksCollection.Aggregate()
+            .SortByDescending(t => t.LastModifiedAt)
+            .Limit(limit)
+            .ToList();
+    }
+
     public static void Add(AudioTrack audioTrack)
     {
+        audioTrack.LastModifiedAt = DateTime.UtcNow;
         TracksCollection.InsertOne(audioTrack);
     }
 
     public static bool Update(AudioTrack audioTrack)
     {
+        audioTrack.LastModifiedAt = DateTime.UtcNow;
         var replaceResult = TracksCollection.ReplaceOne(a => a.Id == audioTrack.Id, audioTrack);
         return replaceResult.MatchedCount == 1;
     }

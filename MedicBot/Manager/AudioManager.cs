@@ -103,6 +103,17 @@ public static class AudioManager
         }
     }
 
+    public static void AddTag(AudioTrack audioTrack, string tagName)
+    {
+        if (audioTrack.Tags.Contains(tagName))
+        {
+            return;
+        }
+
+        audioTrack.Tags.Add(tagName);
+        AudioRepository.Update(audioTrack);
+    }
+
     public static async Task DeleteAsync(string audioName, ulong userId)
     {
         var audioTrack = AudioRepository.FindByNameExact(audioName);
@@ -173,6 +184,17 @@ public static class AudioManager
     public static IEnumerable<AudioTrack> GetNewTracksAsync(long limit = 10)
     {
         return AudioRepository.GetOrderedByDate(limit);
+    }
+
+    public static DateTimeOffset GetLatestUpdateTime()
+    {
+        var latestModifiedTrack = AudioRepository.GetOrderedByDate(1).FirstOrDefault();
+        if (latestModifiedTrack == null || latestModifiedTrack.LastModifiedAt == null)
+        {
+            return DateTimeOffset.UtcNow;
+        }
+
+        return (DateTimeOffset) latestModifiedTrack.LastModifiedAt;
     }
 
     public static IEnumerable<AudioTrack>? GetLastPlayedTracks(DiscordGuild guild)

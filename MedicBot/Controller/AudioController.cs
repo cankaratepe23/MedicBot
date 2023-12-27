@@ -85,12 +85,9 @@ public class AudioController : ControllerBase
     {
         try
         {
-            var lastUpdate = AudioManager.GetNewTracksAsync(1).FirstOrDefault()?.Id.Timestamp;
-            if (lastUpdate != null)
-            {
-                Response.Headers.LastModified = DateTimeOffset.FromUnixTimeSeconds((long)lastUpdate).ToHttpDate();
-            }
-
+            var lastUpdate = AudioManager.GetLatestUpdateTime();
+            Response.Headers.LastModified = lastUpdate.ToHttpDate();
+            
             return Ok(AudioRepository.All().Select(t => t.ToDto()));
         }
         catch (Exception e)
@@ -109,7 +106,11 @@ public class AudioController : ControllerBase
             Log.Debug("User's ID is: {UserId}", userClaim.Value);
             
             var track = AudioManager.FindById(audioId) ?? throw new AudioTrackNotFoundException($"No track was found with ID: {audioId}");
-            var lastUpdate = track.Id.Timestamp;
+            long lastUpdate = track.Id.Timestamp;
+            if (track.LastModifiedAt.HasValue)
+            {
+                lastUpdate = ((DateTimeOffset)track.LastModifiedAt).ToUnixTimeSeconds();
+            }
             Response.Headers.LastModified = DateTimeOffset.FromUnixTimeSeconds(lastUpdate).ToHttpDate();
 
             var file = System.IO.File.OpenRead(track.Path);
