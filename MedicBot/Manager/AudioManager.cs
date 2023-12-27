@@ -188,7 +188,7 @@ public static class AudioManager
 
     public static DateTimeOffset GetLatestUpdateTime()
     {
-        var latestModifiedTrack = AudioRepository.GetOrderedByDate(1).FirstOrDefault();
+        var latestModifiedTrack = AudioRepository.GetOrderedByModified(1).FirstOrDefault();
         if (latestModifiedTrack == null || latestModifiedTrack.LastModifiedAt == null)
         {
             return DateTimeOffset.UtcNow;
