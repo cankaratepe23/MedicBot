@@ -1,4 +1,5 @@
-﻿using System.Security.Authentication;
+﻿using System.Globalization;
+using System.Security.Authentication;
 using System.Security.Claims;
 using MedicBot.Exceptions;
 using MedicBot.Manager;
@@ -7,6 +8,7 @@ using MedicBot.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
+using ZstdSharp.Unsafe;
 
 namespace MedicBot.Controller;
 
@@ -86,8 +88,23 @@ public class AudioController : ControllerBase
         try
         {
             var lastUpdate = AudioManager.GetLatestUpdateTime();
+
+            if (Request.Headers.IfModifiedSince.Count != 0)
+            {
+                var ifModifiedSinceStr = Request.Headers.IfModifiedSince[0];
+                if (!string.IsNullOrEmpty(ifModifiedSinceStr))
+                {
+                    var ifModifiedSince = DateTimeOffset.ParseExact(ifModifiedSinceStr, "r", CultureInfo.InvariantCulture);
+                    if (ifModifiedSince >= lastUpdate.AddTicks(-(lastUpdate.Ticks % TimeSpan.TicksPerSecond)))
+                    {
+                        return StatusCode(304);
+                    }
+                }
+            }
+
             Response.Headers.LastModified = lastUpdate.ToHttpDate();
-            
+            Response.Headers.CacheControl = "no-cache";
+
             return Ok(AudioRepository.All().Select(t => t.ToDto()));
         }
         catch (Exception e)
@@ -106,12 +123,28 @@ public class AudioController : ControllerBase
             Log.Debug("User's ID is: {UserId}", userClaim.Value);
             
             var track = AudioManager.FindById(audioId) ?? throw new AudioTrackNotFoundException($"No track was found with ID: {audioId}");
-            long lastUpdate = track.Id.Timestamp;
+
+            var lastUpdate = DateTimeOffset.FromUnixTimeSeconds(track.Id.Timestamp);
             if (track.LastModifiedAt.HasValue)
             {
-                lastUpdate = ((DateTimeOffset)track.LastModifiedAt).ToUnixTimeSeconds();
+                lastUpdate = (DateTimeOffset) track.LastModifiedAt;
             }
-            Response.Headers.LastModified = DateTimeOffset.FromUnixTimeSeconds(lastUpdate).ToHttpDate();
+
+            if (Request.Headers.IfModifiedSince.Count != 0)
+            {
+                var ifModifiedSinceStr = Request.Headers.IfModifiedSince[0];
+                if (!string.IsNullOrEmpty(ifModifiedSinceStr))
+                {
+                    var ifModifiedSince = DateTimeOffset.ParseExact(ifModifiedSinceStr, "r", CultureInfo.InvariantCulture);
+                    if (ifModifiedSince >= lastUpdate.AddTicks(-(lastUpdate.Ticks % TimeSpan.TicksPerSecond)))
+                    {
+                        return StatusCode(304);
+                    }
+                }
+            }
+
+            Response.Headers.LastModified = lastUpdate.ToHttpDate();
+            Response.Headers.CacheControl = "no-cache";
 
             var file = System.IO.File.OpenRead(track.Path);
             return Ok(file);
