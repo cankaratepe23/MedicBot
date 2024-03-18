@@ -10,7 +10,7 @@ public class AuthController : ControllerBase
     [HttpGet("TestLogin")]
     public async Task<IActionResult> EmulateLoginFromFrontend()
     {
-        return Challenge(new AuthenticationProperties {RedirectUri = "https://medicbot.comaristan.cf/"}, authenticationSchemes: "Discord");
+        return Challenge(new AuthenticationProperties {RedirectUri = "https://medicbot.comaristan.com/"}, authenticationSchemes: "Discord");
     }
 
     [HttpGet("DiscordLogin")]
