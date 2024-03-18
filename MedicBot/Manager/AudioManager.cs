@@ -34,12 +34,11 @@ public static class AudioManager
             throw new ArgumentException($"Filename: {audioName} has invalid characters.");
         }
 
-        if (url.IndexOf('?') != -1)
-        {
-            url = url[..url.IndexOf('?')];
-        }
+        var parsedUrl = new Uri(url);
 
-        if (url.LastIndexOf('.') == -1 || string.IsNullOrWhiteSpace(url[url.LastIndexOf('.')..]))
+        var fileExtension = Path.GetExtension(parsedUrl.AbsolutePath);
+
+        if (string.IsNullOrEmpty(fileExtension))
         {
             Log.Warning("Discord attachment doesn't have a file extension");
             throw new ArgumentException(
@@ -52,7 +51,6 @@ public static class AudioManager
             throw new AudioTrackExistsException($"An AudioTrack with the name {audioName} already exists.");
         }
 
-        var fileExtension = url[url.LastIndexOf('.')..];
         Log.Information("Detected file extension: {FileExtension}", fileExtension);
         var fileName = audioName + fileExtension;
         var filePath = fileExtension.ToLowerInvariant() == ".7z"
