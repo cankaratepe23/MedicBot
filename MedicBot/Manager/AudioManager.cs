@@ -60,6 +60,7 @@ public static class AudioManager
             : string.Join('/', AudioTracksPath, fileName);
 
         {
+            Log.Information("Downloading: {DownloadUrl}", url);
             Log.Information("Downloading file to {FilePath}", filePath);
             using var client = new HttpClient();
             await using var stream = await client.GetStreamAsync(url);
