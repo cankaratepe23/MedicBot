@@ -8,13 +8,13 @@ namespace MedicBot.Controller;
 public class AuthController : ControllerBase
 {
     [HttpGet("TestLogin")]
-    public async Task<IActionResult> EmulateLoginFromFrontend()
+    public IActionResult TestLogin()
     {
         return Challenge(new AuthenticationProperties {RedirectUri = "https://medicbot.comaristan.com/"}, authenticationSchemes: "Discord");
     }
 
     [HttpGet("DiscordLogin")]
-    public async Task<IActionResult> DiscordLogin([FromQuery] string code)
+    public IActionResult DiscordLogin([FromQuery] string code)
     {
         return Ok();
     }
