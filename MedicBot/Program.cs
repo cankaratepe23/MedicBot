@@ -75,7 +75,6 @@ internal static class Program
                     return Task.CompletedTask;
                 };
                 options.Cookie.SameSite = SameSiteMode.None;
-                options.Cookie.Expiration = TimeSpan.FromDays(90);
             })
             .AddDiscord(options =>
             {
@@ -83,7 +82,6 @@ internal static class Program
                 options.ClientSecret = clientSecret;
                 options.CorrelationCookie.SameSite = SameSiteMode.None;
                 options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
-                options.CorrelationCookie.Expiration = TimeSpan.FromDays(90);
             });
 
         var mongoDbSettings = builder.Configuration.GetSection("MongoDb").Get<MongoDbSettings>();
