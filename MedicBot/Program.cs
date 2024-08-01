@@ -45,7 +45,7 @@ internal static class Program
                 policyBuilder.WithOrigins("https://medicbot.comaristan.com").AllowCredentials();
                 if (builder.Environment.IsDevelopment())
                 {
-                    policyBuilder.WithOrigins("http://localhost:3000").AllowCredentials();
+                    policyBuilder.WithOrigins("https://127.0.0.1:3000").AllowCredentials();
                 }
             });
         });
@@ -68,7 +68,14 @@ internal static class Program
                 options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
             }).AddCookie(options =>
             {
-                options.LoginPath = "/Auth/TestLogin";
+                if (builder.Environment.IsDevelopment())
+                {
+                    options.LoginPath = "/Auth/LocalLogin";
+                }
+                else
+                {
+                    options.LoginPath = "/Auth/Login";
+                }
                 options.Events.OnRedirectToLogin = context =>
                 {
                     context.Response.StatusCode = (int) HttpStatusCode.Unauthorized;
