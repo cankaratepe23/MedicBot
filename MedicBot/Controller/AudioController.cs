@@ -83,6 +83,7 @@ public class AudioController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize]
     public IActionResult Get()
     {
         try
