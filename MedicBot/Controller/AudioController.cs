@@ -114,7 +114,7 @@ public class AudioController : ControllerBase
     }
 
     [HttpGet("{audioId}")]
-    [Authorize]
+    [Authorize(Policy = "CombinedPolicy")]
     public IActionResult Get(string audioId, [FromQuery] ulong guildId)
     {
         try

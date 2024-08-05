@@ -1,4 +1,8 @@
-﻿using Microsoft.AspNetCore.Authentication;
+﻿using System.Security.Authentication;
+using System.Security.Claims;
+using MedicBot.Manager;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MedicBot.Controller;
@@ -23,5 +27,16 @@ public class AuthController : ControllerBase
     public IActionResult DiscordLogin([FromQuery] string code)
     {
         return Ok();
+    }
+
+    [Authorize]
+    [HttpGet("TemporaryToken")]
+    public IActionResult GenerateTemporaryToken()
+    {
+        var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
+        var userId = userClaim.Value;
+
+        var token = TokenManager.GenerateTemporaryToken(userId);
+        return Ok(token);
     }
 }

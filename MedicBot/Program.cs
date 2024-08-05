@@ -12,7 +12,10 @@ using MedicBot.Manager;
 using MedicBot.Repository;
 using MedicBot.Utils;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.Primitives;
+using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
 using Serilog;
 
@@ -57,6 +60,14 @@ internal static class Program
             throw new InvalidOperationException("Discord OAuth environment variables are not set.");
         }
 
+        var jwtSecret = Environment.GetEnvironmentVariable(Constants.JwtTokenSecretEnvironmentVariableName);
+        if (string.IsNullOrEmpty(jwtSecret))
+        {
+            throw new InvalidOperationException("JWT secret environment variable is not set.");
+        }
+
+        TokenManager.Init(jwtSecret);
+
         builder.Services.Configure<ForwardedHeadersOptions>(options =>
         {
             options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
@@ -83,6 +94,51 @@ internal static class Program
                 };
                 options.Cookie.SameSite = SameSiteMode.None;
             })
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters {
+                    ValidateIssuerSigningKey = true,
+                    ValidateIssuer = false,
+                    ValidateAudience = false,
+                    IssuerSigningKey = new SymmetricSecurityKey(Convert.FromBase64String(jwtSecret)),
+                    ClockSkew = TimeSpan.Zero
+                };
+
+                options.Events = new JwtBearerEvents {
+                    OnMessageReceived = (context) => {
+                        if (!context.Request.Query.TryGetValue("token", out StringValues values))
+                        {
+                            return Task.CompletedTask;
+                        }
+
+                        if (values.Count > 1) {
+                            context.Response.StatusCode = (int) HttpStatusCode.BadRequest;
+                            context.Fail(
+                                "Only one 'token' query string parameter can be defined. " +
+                                $"However, {values.Count:N0} were included in the request."
+                            );
+
+                            return Task.CompletedTask;
+                        }
+
+                        var token = values.Single();
+
+                        if (string.IsNullOrWhiteSpace(token)) {
+                            context.Response.StatusCode = (int) HttpStatusCode.Unauthorized;
+                            context.Fail(
+                                "The 'token' query string parameter was defined, " +
+                                "but a value to represent the token was not included."
+                            );
+
+                            return Task.CompletedTask;
+                        }
+
+                        context.Token = token;
+
+                        return Task.CompletedTask;
+                    }
+                };
+            })
             .AddDiscord(options =>
             {
                 options.ClientId = clientId;
@@ -90,6 +146,16 @@ internal static class Program
                 options.CorrelationCookie.SameSite = SameSiteMode.None;
                 options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
             });
+
+        builder.Services.AddAuthorization(options =>
+        {
+            options.AddPolicy("CombinedPolicy", policy =>
+            {
+                policy.AuthenticationSchemes.Add(JwtBearerDefaults.AuthenticationScheme);
+                policy.AuthenticationSchemes.Add(CookieAuthenticationDefaults.AuthenticationScheme);
+                policy.RequireAuthenticatedUser();
+            });
+        });
 
         var mongoDbSettings = builder.Configuration.GetSection("MongoDb").Get<MongoDbSettings>();
         if (mongoDbSettings?.ConnectionString is null)
