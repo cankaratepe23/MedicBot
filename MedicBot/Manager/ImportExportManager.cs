@@ -13,8 +13,7 @@ public static class ImportExportManager
         var numberOfEntriesAdded = 0;
         var jsonString = "";
         {
-            using var client = new HttpClient();
-            await using var stream = await client.GetStreamAsync(url);
+            await using var stream = await Program.Client.GetStreamAsync(url);
             using var streamReader = new StreamReader(stream);
             jsonString = await streamReader.ReadToEndAsync();
         }

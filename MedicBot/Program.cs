@@ -23,6 +23,7 @@ namespace MedicBot;
 
 internal static class Program
 {
+    public static readonly HttpClient Client = new();
     private static readonly CancellationTokenSource CancellationTokenSource = new();
     private static DiscordClient? _client;
 
@@ -287,6 +288,7 @@ internal static class Program
         commands.RegisterCommands<ImageCommands>();
         commands.RegisterCommands<SettingsCommands>();
         commands.RegisterCommands<ImportExportCommands>();
+        commands.RegisterCommands<MiscCommands>();
         commands.RegisterConverter(new StringLowercaseConverter());
 
         // Interactivity Init

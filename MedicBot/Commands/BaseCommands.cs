@@ -1,9 +1,6 @@
 ﻿using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
-using DSharpPlus.Entities;
-using DSharpPlus.Interactivity.Extensions;
 using MedicBot.Manager;
-using MedicBot.Utils;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Serilog;

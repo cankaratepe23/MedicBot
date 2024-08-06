@@ -16,6 +16,7 @@
         <PackageReference Include="DSharpPlus.Lavalink" Version="4.4.6" />
         <PackageReference Include="DSharpPlus.SlashCommands" Version="4.4.6" />
         <PackageReference Include="Fastenshtein" Version="1.0.0.8" />
+        <PackageReference Include="HtmlAgilityPack" Version="1.11.62" />
         <PackageReference Include="Magick.NET-Q8-x64" Version="13.6.0" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="7.0.17" />
         <PackageReference Include="MongoDB.Driver" Version="2.24.0" />

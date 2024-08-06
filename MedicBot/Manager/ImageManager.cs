@@ -62,8 +62,7 @@ public static class ImageManager
 
         {
             Log.Information("Downloading file to {FilePath}", filePath);
-            using var client = new HttpClient();
-            await using var stream = await client.GetStreamAsync(url);
+            await using var stream = await Program.Client.GetStreamAsync(url);
             await using var fileStream = File.OpenWrite(filePath);
             await stream.CopyToAsync(fileStream);
             await fileStream.FlushAsync();
