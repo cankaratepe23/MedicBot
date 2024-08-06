@@ -94,7 +94,7 @@ internal static class Program
                     return Task.CompletedTask;
                 };
                 options.Cookie.SameSite = SameSiteMode.None;
-                options.Cookie.Expiration = TimeSpan.FromDays(7);
+                options.Cookie.MaxAge = TimeSpan.FromDays(7);
             })
             .AddJwtBearer(options =>
             {
