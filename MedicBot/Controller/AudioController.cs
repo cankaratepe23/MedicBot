@@ -1,12 +1,15 @@
 ﻿using System.Globalization;
 using System.Security.Authentication;
 using System.Security.Claims;
+using System.Text;
 using MedicBot.Exceptions;
 using MedicBot.Manager;
 using MedicBot.Repository;
 using MedicBot.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles;
+using MimeTypes;
 using Serilog;
 using ZstdSharp.Unsafe;
 
@@ -147,8 +150,11 @@ public class AudioController : ControllerBase
             Response.Headers.LastModified = lastUpdate.ToHttpDate();
             Response.Headers.CacheControl = "no-cache";
 
-            var file = System.IO.File.OpenRead(track.Path);
-            return Ok(file);
+            var fileBytes = System.IO.File.ReadAllBytes(track.Path);
+            var fileBase64 = Convert.ToBase64String(fileBytes);
+            var mimeType = MimeTypeMap.GetMimeType(track.Path[track.Path.LastIndexOf('.')..]);
+            var htmlResponse = $"<audio controls style=\"margin: auto;padding-top: 50%;display: table;\"><source src=\"data:{mimeType};base64,{fileBase64}\" type=\"{mimeType}\"></audio>";
+            return Content(htmlResponse, "text/html");
         }
         catch (AudioTrackNotFoundException e)
         {
