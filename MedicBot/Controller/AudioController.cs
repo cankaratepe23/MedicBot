@@ -8,7 +8,7 @@ using MedicBot.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
-using ZstdSharp.Unsafe;
+using MimeTypes;
 
 namespace MedicBot.Controller;
 
@@ -147,8 +147,58 @@ public class AudioController : ControllerBase
             Response.Headers.LastModified = lastUpdate.ToHttpDate();
             Response.Headers.CacheControl = "no-cache";
 
+            var mimeType = MimeTypeMap.GetMimeType(track.Path[track.Path.LastIndexOf('.')..]);
+            Response.Headers.ContentType = mimeType;
+
             var file = System.IO.File.OpenRead(track.Path);
             return Ok(file);
+        }
+        catch (AudioTrackNotFoundException e)
+        {
+            return NotFound(e.Message);
+        }
+        catch (Exception e)
+        {
+            return BadRequest(e.Message);
+        }
+    }
+
+    [HttpHead("{audioId}")]
+    [Authorize(Policy = "CombinedPolicy")]
+    public IActionResult Head(string audioId, [FromQuery] ulong guildId)
+    {
+        try
+        {
+            var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
+            Log.Debug("User's ID is: {UserId}", userClaim.Value);
+            
+            var track = AudioManager.FindById(audioId) ?? throw new AudioTrackNotFoundException($"No track was found with ID: {audioId}");
+
+            var lastUpdate = DateTimeOffset.FromUnixTimeSeconds(track.Id.Timestamp);
+            if (track.LastModifiedAt.HasValue)
+            {
+                lastUpdate = (DateTimeOffset) track.LastModifiedAt;
+            }
+
+            if (Request.Headers.IfModifiedSince.Count != 0)
+            {
+                var ifModifiedSinceStr = Request.Headers.IfModifiedSince[0];
+                if (!string.IsNullOrEmpty(ifModifiedSinceStr))
+                {
+                    var ifModifiedSince = DateTimeOffset.ParseExact(ifModifiedSinceStr, "r", CultureInfo.InvariantCulture);
+                    if (ifModifiedSince >= lastUpdate.AddTicks(-(lastUpdate.Ticks % TimeSpan.TicksPerSecond)))
+                    {
+                        return StatusCode(304);
+                    }
+                }
+            }
+
+            Response.Headers.LastModified = lastUpdate.ToHttpDate();
+            Response.Headers.CacheControl = "no-cache";
+
+            var mimeType = MimeTypeMap.GetMimeType(track.Path[track.Path.LastIndexOf('.')..]);
+            Response.Headers.ContentType = mimeType;
+            return Ok();
         }
         catch (AudioTrackNotFoundException e)
         {
