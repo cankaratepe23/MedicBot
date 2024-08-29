@@ -89,6 +89,9 @@ public class AudioController : ControllerBase
         try
         {
             var lastUpdate = AudioManager.GetLatestUpdateTime();
+            
+            Response.Headers.LastModified = lastUpdate.ToHttpDate();
+            Response.Headers.CacheControl = "no-cache";
 
             if (Request.Headers.IfModifiedSince.Count != 0)
             {
@@ -102,9 +105,6 @@ public class AudioController : ControllerBase
                     }
                 }
             }
-
-            Response.Headers.LastModified = lastUpdate.ToHttpDate();
-            Response.Headers.CacheControl = "no-cache";
 
             return Ok(AudioRepository.All().Select(t => t.ToDto()));
         }
@@ -131,6 +131,9 @@ public class AudioController : ControllerBase
                 lastUpdate = (DateTimeOffset) track.LastModifiedAt;
             }
 
+            Response.Headers.LastModified = lastUpdate.ToHttpDate();
+            Response.Headers.CacheControl = "no-cache";
+
             if (Request.Headers.IfModifiedSince.Count != 0)
             {
                 var ifModifiedSinceStr = Request.Headers.IfModifiedSince[0];
@@ -143,9 +146,6 @@ public class AudioController : ControllerBase
                     }
                 }
             }
-
-            Response.Headers.LastModified = lastUpdate.ToHttpDate();
-            Response.Headers.CacheControl = "no-cache";
 
             var mimeType = MimeTypeMap.GetMimeType(track.Path[track.Path.LastIndexOf('.')..]);
             Response.Headers.ContentType = mimeType;
@@ -179,6 +179,9 @@ public class AudioController : ControllerBase
             {
                 lastUpdate = (DateTimeOffset) track.LastModifiedAt;
             }
+            
+            Response.Headers.LastModified = lastUpdate.ToHttpDate();
+            Response.Headers.CacheControl = "no-cache";
 
             if (Request.Headers.IfModifiedSince.Count != 0)
             {
@@ -192,9 +195,6 @@ public class AudioController : ControllerBase
                     }
                 }
             }
-
-            Response.Headers.LastModified = lastUpdate.ToHttpDate();
-            Response.Headers.CacheControl = "no-cache";
 
             var mimeType = MimeTypeMap.GetMimeType(track.Path[track.Path.LastIndexOf('.')..]);
             Response.Headers.ContentType = mimeType;
