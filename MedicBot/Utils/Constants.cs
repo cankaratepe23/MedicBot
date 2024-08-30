@@ -39,6 +39,7 @@ public static class Constants
     public const string DbCollectionInitializedBotSettings = "BotSetting collection initialized";
     public const string DbCollectionInitializedUserPoints = "UserPoints collection initialized";
     public const string DbCollectionInitializedUserMutes = "UserMute collection initialized";
+    public const string DbCollectionInitializedUserFavorites = "UserFavorites collection initialized";
 
 
     public const string MinNumberOfUsersNeededToEarnPoints = "min_number_of_users_needed_to_earn_points";

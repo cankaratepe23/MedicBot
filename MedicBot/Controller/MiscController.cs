@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace MedicBot;
+namespace MedicBot.Controller;
 
 [ApiController]
 public class MiscController : ControllerBase

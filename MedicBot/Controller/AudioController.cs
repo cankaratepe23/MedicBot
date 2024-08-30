@@ -84,12 +84,19 @@ public class AudioController : ControllerBase
 
     [HttpGet]
     [Authorize]
-    public IActionResult Get()
+    public IActionResult Get([FromQuery] ulong? userId)
     {
         try
         {
-            var lastUpdate = AudioManager.GetLatestUpdateTime();
+            if (userId != null)
+            {
+                var userFavoriteTracks = UserManager.GetFavoriteTrackIds(userId.Value);
+                var allTracks = AudioRepository.All().Select(t => t.ToDto().Enrich(userFavoriteTracks.Contains(t.Id)));
+                return Ok(allTracks);
+            }
             
+            var lastUpdate = AudioManager.GetLatestUpdateTime();
+
             Response.Headers.LastModified = lastUpdate.ToHttpDate();
             Response.Headers.CacheControl = "no-cache";
 
@@ -122,13 +129,13 @@ public class AudioController : ControllerBase
         {
             var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
             Log.Debug("User's ID is: {UserId}", userClaim.Value);
-            
+
             var track = AudioManager.FindById(audioId) ?? throw new AudioTrackNotFoundException($"No track was found with ID: {audioId}");
 
             var lastUpdate = DateTimeOffset.FromUnixTimeSeconds(track.Id.Timestamp);
             if (track.LastModifiedAt.HasValue)
             {
-                lastUpdate = (DateTimeOffset) track.LastModifiedAt;
+                lastUpdate = (DateTimeOffset)track.LastModifiedAt;
             }
 
             Response.Headers.LastModified = lastUpdate.ToHttpDate();
@@ -171,15 +178,15 @@ public class AudioController : ControllerBase
         {
             var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
             Log.Debug("User's ID is: {UserId}", userClaim.Value);
-            
+
             var track = AudioManager.FindById(audioId) ?? throw new AudioTrackNotFoundException($"No track was found with ID: {audioId}");
 
             var lastUpdate = DateTimeOffset.FromUnixTimeSeconds(track.Id.Timestamp);
             if (track.LastModifiedAt.HasValue)
             {
-                lastUpdate = (DateTimeOffset) track.LastModifiedAt;
+                lastUpdate = (DateTimeOffset)track.LastModifiedAt;
             }
-            
+
             Response.Headers.LastModified = lastUpdate.ToHttpDate();
             Response.Headers.CacheControl = "no-cache";
 

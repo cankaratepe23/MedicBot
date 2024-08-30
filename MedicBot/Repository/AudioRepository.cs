@@ -165,7 +165,7 @@ public class AudioRepository
 
     public static void Add(AudioTrack audioTrack)
     {
-        audioTrack.LastModifiedAt = DateTime.UtcNow;
+        audioTrack.LastModifiedAt = DateTime.UtcNow; // TODO Move last updates for both audio tracks and favorites to separate collection
         TracksCollection.InsertOne(audioTrack);
     }
 

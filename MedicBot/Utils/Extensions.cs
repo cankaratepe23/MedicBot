@@ -101,6 +101,12 @@ public static class Extensions
         };
     }
 
+    public static AudioTrackDto Enrich(this AudioTrackDto audioTrackDto, bool isFavorite)
+    {
+        audioTrackDto.IsFavorite = isFavorite;
+        return audioTrackDto;
+    }
+
     public static string ToPrettyString(this TimeSpan span)
     {
 

@@ -3,6 +3,7 @@ using DSharpPlus.Entities;
 using MedicBot.Model;
 using MedicBot.Repository;
 using MedicBot.Utils;
+using MongoDB.Bson;
 using Serilog;
 
 namespace MedicBot.Manager;
@@ -93,5 +94,33 @@ public static class UserManager
 
         reason = reasonBuilder.ToString();
         return userHasEnoughPoints && userIsNotMuted;
+    }
+
+    public static HashSet<ObjectId> GetFavoriteTrackIds(ulong userId)
+    {
+        var userFavorites = UserFavoritesRepository.GetUserFavorites(userId);
+        return new HashSet<ObjectId>(userFavorites.Select(f => f.TrackId));
+    }
+
+    public static void AddTrackToFavorites(ulong userId, AudioTrack track)
+    {
+        if (UserFavoritesRepository.IsFavorited(userId, track.Id))
+        {
+            Log.Information("Track {Track} is already favorited by {User}", track, userId);
+            return;
+        }
+
+        UserFavoritesRepository.Add(new UserFavorite(userId, track.Id));
+    }
+
+    public static void RemoveTrackFromFavorites(ulong userId, AudioTrack track)
+    {
+        if (!UserFavoritesRepository.IsFavorited(userId, track.Id))
+        {
+            Log.Information("Track {Track} is not favorited by {User}", track, userId);
+            return;
+        }
+
+        UserFavoritesRepository.DeleteByUserAndTrackId(userId, track.Id);
     }
 }
