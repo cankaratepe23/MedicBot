@@ -21,9 +21,9 @@ public class UserController : ControllerBase
         return Ok(userFavorites);
     }
 
-    [HttpPost("@me/Favorites")]
+    [HttpPost("@me/Favorites/{trackId}")]
     [Authorize]
-    public IActionResult Post([FromBody] string trackId)
+    public IActionResult Post(string trackId)
     {
         var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
         var userId = Convert.ToUInt64(userClaim.Value);
@@ -37,9 +37,9 @@ public class UserController : ControllerBase
         return Ok();
     }
 
-    [HttpDelete("@me/Favorites")]
+    [HttpDelete("@me/Favorites/{trackId}")]
     [Authorize]
-    public IActionResult Delete([FromBody] string trackId)
+    public IActionResult Delete(string trackId)
     {
         var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
         var userId = Convert.ToUInt64(userClaim.Value);
