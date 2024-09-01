@@ -46,10 +46,10 @@ internal static class Program
         {
             options.AddPolicy("MedicBotPolicy", policyBuilder =>
             {
-                policyBuilder.WithOrigins("https://medicbot.comaristan.com").AllowCredentials();
+                policyBuilder.WithOrigins("https://medicbot.comaristan.com").WithMethods("GET", "POST", "DELETE").AllowCredentials();
                 if (builder.Environment.IsDevelopment())
                 {
-                    policyBuilder.WithOrigins("https://127.0.0.1:3000").AllowCredentials();
+                    policyBuilder.WithOrigins("https://127.0.0.1:3000").WithMethods("GET", "POST", "DELETE").AllowCredentials();
                 }
             });
         });
