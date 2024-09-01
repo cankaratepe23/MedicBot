@@ -71,7 +71,6 @@ public class AudioController : ControllerBase
         Log.Debug("User's ID is: {UserId}", userClaim.Value);
         try
         {
-            // TODO: Change null to the discord member when Authentication is implemented
             await AudioManager.PlayAsync(audioNameOrId, guildId, Convert.ToUInt64(userClaim.Value), searchById);
         }
         catch (AudioTrackNotFoundException e)

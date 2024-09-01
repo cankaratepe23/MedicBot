@@ -11,6 +11,7 @@ public class UserController : ControllerBase
 {
     // TODO Get userId from authorization instead of API path
     [HttpGet("{userId}/Favorites")]
+    [Authorize]
     public IActionResult Get(ulong userId)
     {
         var userFavorites = UserManager.GetFavoriteTrackIds(userId).Select(id => id.ToString());
@@ -18,6 +19,7 @@ public class UserController : ControllerBase
     }
 
     [HttpPost("{userId}/Favorites")]
+    [Authorize]
     public IActionResult Post(ulong userId, [FromBody] string trackId)
     {
         var track = AudioManager.FindById(trackId);
@@ -31,6 +33,7 @@ public class UserController : ControllerBase
     }
 
     [HttpDelete("{userId}/Favorites")]
+    [Authorize]
     public IActionResult Delete(ulong userId, [FromBody] string trackId)
     {
         var track = AudioManager.FindById(trackId);

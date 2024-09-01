@@ -14,10 +14,8 @@ public class AudioRepository
 {
     private static readonly IMongoCollection<AudioTrack> TracksCollection;
 
-    // TODO Nested method calls to AudioRepository open two file handles which is sub-optimal
     static AudioRepository()
     {
-        // TODO Ensure db and collection is created.
         var collection = MongoDbManager.Database.GetCollection<AudioTrack>(AudioTrack.CollectionName);
         TracksCollection = collection;
         // collection.EnsureIndex(a => a.Name);

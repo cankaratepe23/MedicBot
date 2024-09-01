@@ -37,7 +37,6 @@ public static class VoiceStateHandler
     public static Task DiscordOnVoiceStateUpdated(DiscordClient sender, VoiceStateUpdateEventArgs e)
     {
         // TODO Check if a semaphore is needed
-        // TODO If more functionality is to be added into this event handler, moving each separate function to different methods would increase readability.
         if (!e.User.IsBot)
         {
             UpdateThreshold();
@@ -54,9 +53,6 @@ public static class VoiceStateHandler
             {
                 TrackerUserChangeChannel(e);
             }
-
-            // TODO else case: A user may change voice channels. This is neither a connect nor disconnect case,
-            // but they but should be removed from the tracker and re-added to the new channel's tracker.
         }
 
         return Task.CompletedTask;

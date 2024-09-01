@@ -13,7 +13,6 @@ public static class SettingsRepository
 
     static SettingsRepository()
     {
-        // TODO Ensure db and collection is created.
         SettingsCollection = MongoDbManager.Database.GetCollection<BotSetting>(BotSetting.CollectionName);
         Init(Constants.MinNumberOfUsersNeededToEarnPoints, 2);
         Init(Constants.DefaultScore, 10);
