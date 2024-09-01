@@ -1,3 +1,5 @@
+using System.Security.Authentication;
+using System.Security.Claims;
 using MedicBot.Manager;
 using MedicBot.Repository;
 using Microsoft.AspNetCore.Authorization;
@@ -9,19 +11,22 @@ namespace MedicBot.Controller;
 [Route("[controller]")]
 public class UserController : ControllerBase
 {
-    // TODO Get userId from authorization instead of API path
-    [HttpGet("{userId}/Favorites")]
+    [HttpGet("@me/Favorites")]
     [Authorize]
-    public IActionResult Get(ulong userId)
+    public IActionResult Get()
     {
+        var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
+        var userId = Convert.ToUInt64(userClaim.Value);
         var userFavorites = UserManager.GetFavoriteTrackIds(userId).Select(id => id.ToString());
         return Ok(userFavorites);
     }
 
-    [HttpPost("{userId}/Favorites")]
+    [HttpPost("@me/Favorites")]
     [Authorize]
-    public IActionResult Post(ulong userId, [FromBody] string trackId)
+    public IActionResult Post([FromBody] string trackId)
     {
+        var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
+        var userId = Convert.ToUInt64(userClaim.Value);
         var track = AudioManager.FindById(trackId);
         if (track == null)
         {
@@ -32,10 +37,12 @@ public class UserController : ControllerBase
         return Ok();
     }
 
-    [HttpDelete("{userId}/Favorites")]
+    [HttpDelete("@me/Favorites")]
     [Authorize]
-    public IActionResult Delete(ulong userId, [FromBody] string trackId)
+    public IActionResult Delete([FromBody] string trackId)
     {
+        var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
+        var userId = Convert.ToUInt64(userClaim.Value);
         var track = AudioManager.FindById(trackId);
         // TODO Move to Manager method instead of directly using repository
         if (track == null || !UserFavoritesRepository.IsFavorited(userId, track.Id))

@@ -83,13 +83,16 @@ public class AudioController : ControllerBase
 
     [HttpGet]
     [Authorize]
-    public IActionResult Get([FromQuery] ulong? userId)
+    public IActionResult Get([FromQuery] bool? enriched)
     {
         try
         {
-            if (userId != null)
+            if (enriched != null && enriched.Value)
             {
-                var userFavoriteTracks = UserManager.GetFavoriteTrackIds(userId.Value);
+                // TODO Change caching logic to include enriched endpoint
+                var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
+                var userId = Convert.ToUInt64(userClaim.Value);
+                var userFavoriteTracks = UserManager.GetFavoriteTrackIds(userId);
                 var allTracks = AudioRepository.All().Select(t => t.ToDto().Enrich(userFavoriteTracks.Contains(t.Id)));
                 return Ok(allTracks);
             }
