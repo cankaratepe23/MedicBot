@@ -141,6 +141,7 @@ public static class AudioManager
 
     public static async Task<IEnumerable<AudioTrack>> FindAsync(string searchQuery, long limit = 10, DiscordGuild? guild = null)
     {
+        // TODO Sort results (check if needed first)
         string? tag = null;
         searchQuery = searchQuery.Trim();
         if (searchQuery.Contains(':'))

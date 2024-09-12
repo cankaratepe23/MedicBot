@@ -85,6 +85,8 @@ public class AudioController : ControllerBase
     [Authorize]
     public IActionResult Get([FromQuery] bool? enriched)
     {
+        // TODO Use Manager instead of directly using repository
+        // TODO Sort results in API instead of doing it client-side
         try
         {
             if (enriched != null && enriched.Value)
