@@ -77,17 +77,18 @@ public static class VoiceStateHandler
     {
         foreach (var member in channel.GetNonBotUsers())
         {
-            if (!VoiceStateTrackers.ContainsKey(channel.Id))
+            if (!VoiceStateTrackers.TryGetValue(channel.Id, out Dictionary<ulong, UserVoiceStateInfo>? value))
             {
-                VoiceStateTrackers.Add(channel.Id, new Dictionary<ulong, UserVoiceStateInfo>());
+                value = new Dictionary<ulong, UserVoiceStateInfo>();
+                VoiceStateTrackers.Add(channel.Id, value);
             }
 
-            if (VoiceStateTrackers[channel.Id].ContainsKey(member.Id))
+            if (value.ContainsKey(member.Id))
             {
                 continue;
             }
 
-            VoiceStateTrackers[channel.Id].Add(member.Id, new UserVoiceStateInfo(member) {StartTime = DateTime.UtcNow});
+            value.Add(member.Id, new UserVoiceStateInfo(member) {StartTime = DateTime.UtcNow});
             Log.Information("Now tracking user {User}", member);
         }
     }
@@ -123,19 +124,19 @@ public static class VoiceStateHandler
     private static void TrackerRemoveChannel(ulong channelId)
     {
         Log.Debug("Removing everyone in channel with ID: {ChannelId} from the tracker list", channelId);
-        if (!VoiceStateTrackers.ContainsKey(channelId))
+        if (!VoiceStateTrackers.TryGetValue(channelId, out Dictionary<ulong, UserVoiceStateInfo>? value))
         {
             Log.Debug("Channel with ID: {ChannelId} was not being tracked", channelId);
             return;
         }
 
-        foreach (var (_, voiceStateInfo) in VoiceStateTrackers[channelId])
+        foreach (var (_, voiceStateInfo) in value)
         {
             voiceStateInfo.FinishTime = DateTime.UtcNow;
             UserManager.AddPoints(voiceStateInfo.User, voiceStateInfo.GetTimeSpentInVoice());
         }
 
-        VoiceStateTrackers[channelId].Clear();
+        value.Clear();
     }
 
     private static void TrackerUserChangeChannel(VoiceStateUpdateEventArgs e)

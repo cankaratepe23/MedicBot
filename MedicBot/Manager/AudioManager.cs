@@ -1,4 +1,4 @@
-﻿using DSharpPlus;
+using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.Lavalink;
 using MedicBot.Exceptions;
@@ -355,21 +355,23 @@ public static class AudioManager
             throw new LavalinkLoadFailedException(result.LoadResultType.ToString());
         }
 
-        if (!LastPlayedTracks.ContainsKey(guild.Id))
+        if (!LastPlayedTracks.TryGetValue(guild.Id, out Queue<AudioTrack>? value))
         {
-            LastPlayedTracks.Add(guild.Id, new Queue<AudioTrack>(10));
+            value = new Queue<AudioTrack>(10);
+            LastPlayedTracks.Add(guild.Id, value);
         }
 
-        if (LastPlayedTracks[guild.Id].Count >= 10)
+        if (value.Count >= 10)
         {
-            _ = LastPlayedTracks[guild.Id].Dequeue();
+            _ = value.Dequeue();
         }
 
-        LastPlayedTracks[guild.Id].Enqueue(audioTrack);
+        value.Enqueue(audioTrack);
 
         await connection.PlayAsync(result.Tracks.FirstOrDefault());
-
-        UserManager.DeductPoints(member, audioTrack.Price);
+        // TODO If PlayAsync does not return immediately and waits for playback to end (not likely), user could end up with a negative balance.
+        var audioPrice = audioTrack.CalculateAndSetPrice();
+        UserManager.DeductPoints(member, audioPrice);
     }
 
     public static async Task PlayAsync(Uri audioUrl, DiscordGuild guild, DiscordMember member)
