@@ -44,11 +44,14 @@ public static class Constants
 
     public const string MinNumberOfUsersNeededToEarnPoints = "min_number_of_users_needed_to_earn_points";
     public const string DefaultScore = "default_score";
+    public const string PriceIncreasePerUse = "price_increase_per_use";
+    public const string PriceDecreasePerMinute = "price_decrease_per_minute";
+    public const string PriceMaximum = "price_maximum";
 
     public static readonly HashSet<string> ObservedSettingKeys = new() {MinNumberOfUsersNeededToEarnPoints};
 
     public static readonly HashSet<string>
-        IntegerSettingKeys = new() {MinNumberOfUsersNeededToEarnPoints, DefaultScore};
+        IntegerSettingKeys = new() {MinNumberOfUsersNeededToEarnPoints, DefaultScore, PriceIncreasePerUse, PriceDecreasePerMinute, PriceMaximum};
 
     public static readonly char[] InvalidFileNameChars =
     {

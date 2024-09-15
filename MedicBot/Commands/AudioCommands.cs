@@ -286,4 +286,28 @@ public class AudioCommands : BaseCommandModule
 
         await ctx.RespondAsync($"You have {memberPoints} points, which means you can play around {Math.Floor(memberPoints / defaultPrice)} tracks.");
     }
+
+    [Command("price")]
+    [Aliases("fiyat")]
+    public async Task PriceCommand(CommandContext ctx, [RemainingText] string searchTerm)
+    {
+        try
+        {
+            var matchingTracks = (await AudioManager.FindAsync(searchTerm, 1)).ToList();
+            if (matchingTracks.Count == 0)
+            {
+                await ctx.RespondAsync("No matching tracks found");
+                return;
+            }
+            
+            var matchingTrack = matchingTracks[0];
+            var effectivePrice = matchingTrack.CalculateAndDecreasePrice();
+            await ctx.RespondAsync($"Current price for `{matchingTrack.Name}`: {effectivePrice}");
+        }
+        catch (Exception e)
+        {
+            await ctx.RespondAsync(e.Message);
+            throw;
+        }
+    }
 }

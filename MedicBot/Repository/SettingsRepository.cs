@@ -16,6 +16,9 @@ public static class SettingsRepository
         SettingsCollection = MongoDbManager.Database.GetCollection<BotSetting>(BotSetting.CollectionName);
         Init(Constants.MinNumberOfUsersNeededToEarnPoints, 2);
         Init(Constants.DefaultScore, 10);
+        Init(Constants.PriceIncreasePerUse, 1);
+        Init(Constants.PriceDecreasePerMinute, 1);
+        Init(Constants.PriceMaximum, 100);
         Log.Information(Constants.DbCollectionInitializedBotSettings);
     }
 

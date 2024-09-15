@@ -1,4 +1,4 @@
-using DSharpPlus;
+﻿using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.Lavalink;
 using MedicBot.Exceptions;
@@ -433,6 +433,72 @@ public static class AudioManager
         var guild = Client.FindGuild(guildId);
         var member = guild.Members[memberId];
         await PlayAsync(audioNameOrId, guild, member, searchById);
+    }
+
+    #endregion
+
+    #region Points
+    /// <summary>
+    /// Calculates the price decrease on an audio track based on previous price and last price update date,
+    /// and updates the price information of the track.
+    /// <para />
+    /// Should be called if checking the current price, or there is another need to update the price property of the audio track.
+    /// </summary>
+    /// <returns>The price that would have been used if it were played.</returns>
+    public static int CalculateAndDecreasePrice(this AudioTrack audioTrack)
+    {
+        var basePrice = SettingsRepository.GetValue<int>(Constants.DefaultScore);
+        if (audioTrack.LastPriceUpdateAt != null)
+        {
+            var roundedMinutesSinceLastPriceUpdate = (int)(DateTime.UtcNow - audioTrack.LastPriceUpdateAt).Value.TotalMinutes;
+            if (roundedMinutesSinceLastPriceUpdate > 0)
+            {
+                var priceDecreasePerMinute = SettingsRepository.GetValue<int>(Constants.PriceDecreasePerMinute);
+                var priceDecrease = roundedMinutesSinceLastPriceUpdate * priceDecreasePerMinute;
+
+                if (audioTrack.Price - priceDecrease < 0)
+                {
+                    audioTrack.Price = 0;
+                }
+                else
+                {
+                    audioTrack.Price -= priceDecrease;
+                }
+
+                audioTrack.LastPriceUpdateAt = DateTime.UtcNow;
+            }
+        }
+        var effectivePrice = audioTrack.Price + basePrice;
+        AudioRepository.Update(audioTrack);
+        return effectivePrice;
+    }
+
+    private static void CalculateAndIncreasePrice(this AudioTrack audioTrack)
+    {
+        var priceIncreasePerUse = SettingsRepository.GetValue<int>(Constants.PriceIncreasePerUse);
+        var priceMaximum = SettingsRepository.GetValue<int>(Constants.PriceMaximum);
+        if (audioTrack.Price + priceIncreasePerUse > priceMaximum)
+        {
+            audioTrack.Price = priceMaximum;
+        }
+        else
+        {
+            audioTrack.Price += priceIncreasePerUse;   
+        }
+        audioTrack.LastPriceUpdateAt = DateTime.UtcNow;
+        AudioRepository.Update(audioTrack);
+    }
+
+    /// <summary>
+    /// Decreases the price of the audio track according to last update date, if needed, and returns the up-to-date usage cost for the track.
+    /// Also increases the price of the track for future uses.
+    /// </summary>
+    /// <returns></returns>
+    public static int CalculateAndSetPrice(this AudioTrack audioTrack)
+    {
+        var effectivePrice = audioTrack.CalculateAndDecreasePrice();
+        audioTrack.CalculateAndIncreasePrice();
+        return effectivePrice;
     }
 
     #endregion

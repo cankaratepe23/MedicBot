@@ -71,7 +71,8 @@ public static class UserManager
     public static bool CanPlayAudio(DiscordMember member, AudioTrack audioTrack, out string reason)
     {
         var userPoints = UserPointsRepository.GetPoints(member.Id);
-        var trackPrice = audioTrack.Price;
+        var audioPrice = audioTrack.CalculateAndDecreasePrice();
+        var trackPrice = audioPrice;
 
         var userHasEnoughPoints = userPoints >= trackPrice;
         var userIsNotMuted = !IsMuted(member);

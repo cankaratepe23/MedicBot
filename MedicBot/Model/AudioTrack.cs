@@ -10,7 +10,6 @@ public class AudioTrack
 {
     public const string CollectionName = "audioTracks";
 
-    private int _price;
 #pragma warning disable CS8618
     public AudioTrack()
 #pragma warning restore CS8618
@@ -18,11 +17,11 @@ public class AudioTrack
     }
 
     public AudioTrack(string name, string path, ulong ownerId) : this(name, new List<string>(), new List<string>(),
-        path, ownerId, -1)
+        path, ownerId, 0)
     {
     }
 
-    public AudioTrack(string name, List<string> aliases, List<string> tags, string path, ulong ownerId, int price = -1)
+    public AudioTrack(string name, List<string> aliases, List<string> tags, string path, ulong ownerId, int price = 0)
     {
         Id = new ObjectId();
         Name = name;
@@ -42,12 +41,9 @@ public class AudioTrack
     public string Path { get; set; }
     public ulong OwnerId { get; set; }
     public DateTime? LastModifiedAt { get; set; }
+    public DateTime? LastPriceUpdateAt { get; set; }
 
-    public int Price
-    {
-        get => _price < 0 ? SettingsRepository.GetValue<int>(Constants.DefaultScore) : _price;
-        set => _price = value;
-    }
+    public int Price { get; set; }
 
     public override string ToString()
     {
