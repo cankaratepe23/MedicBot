@@ -7,6 +7,7 @@ using MedicBot.Utils;
 namespace MedicBot.Commands;
 
 [Group("setting")]
+[Aliases("settings")]
 public class SettingsCommands : BaseCommandModule
 {
     [Command("set")]
