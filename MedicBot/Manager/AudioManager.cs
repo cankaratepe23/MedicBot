@@ -372,6 +372,7 @@ public static class AudioManager
         // TODO If PlayAsync does not return immediately and waits for playback to end (not likely), user could end up with a negative balance.
         var audioPrice = audioTrack.CalculateAndSetPrice();
         UserManager.DeductPoints(member, audioPrice);
+        Log.Information("User {User} has played {AudioTrack} for {AudioPrice}", member, audioTrack, audioPrice);
     }
 
     public static async Task PlayAsync(Uri audioUrl, DiscordGuild guild, DiscordMember member)
