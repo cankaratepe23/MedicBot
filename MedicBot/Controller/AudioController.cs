@@ -62,6 +62,7 @@ public class AudioController : ControllerBase
         return Ok();
     }
 
+    // TODO This should be POST, why is it GET?
     [HttpGet("Play/{guildId}")] // TODO Play/audioId & guild ID from query instead
     [Authorize]
     public async Task<IActionResult> Play(ulong guildId, [FromQuery] string audioNameOrId,
