@@ -213,6 +213,14 @@ internal static class Program
             .WriteTo.Console(
                 outputTemplate: Constants.SerilogOutputTemplate);
 
+        var mongoDbConnectionStringWithDatabaseName = mongoDbSettings.GetConnectionStringWithDatabaseName();
+        if (mongoDbConnectionStringWithDatabaseName != null)
+        {
+            loggerConfiguration.WriteTo.MongoDBBson(mongoDbConnectionStringWithDatabaseName,
+                cappedMaxDocuments: 10000,
+                rollingInterval: Serilog.Sinks.MongoDB.RollingInterval.Month);
+        }
+
         if (app.Environment.IsDevelopment())
         {
             loggerConfiguration.MinimumLevel.Debug();
