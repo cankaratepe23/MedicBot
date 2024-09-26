@@ -126,7 +126,7 @@ public class AudioCommands : BaseCommandModule
                 return;
             }
 
-            await AudioManager.PlayAsync(audioName, ctx.Guild, ctx.Member);
+            await AudioManager.PlayAsync(audioName, ctx.Guild, ctx.Member, ctx);
         }
         catch (AudioTrackNotFoundException e)
         {

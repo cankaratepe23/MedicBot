@@ -1,4 +1,5 @@
 ﻿using DSharpPlus;
+using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
 using DSharpPlus.Lavalink;
 using MedicBot.Exceptions;
@@ -329,7 +330,7 @@ public static class AudioManager
 
     #region Play
 
-    public static async Task PlayAsync(AudioTrack audioTrack, DiscordGuild guild, DiscordMember member)
+    public static async Task PlayAsync(AudioTrack audioTrack, DiscordGuild guild, DiscordMember member, CommandContext? ctx = null)
     {
         if (!UserManager.CanPlayAudio(member, audioTrack, out var reason))
         {
@@ -373,6 +374,14 @@ public static class AudioManager
         var audioPrice = audioTrack.CalculateAndSetPrice();
         UserManager.DeductPoints(member, audioPrice);
         Log.Information("User {User} has played {AudioTrack} for {AudioPrice}", member, audioTrack, audioPrice);
+        var playbackLog = new AudioPlaybackLog()
+        {
+            Timestamp = DateTime.UtcNow,
+            AudioTrack = audioTrack,
+            DiscordMember = member,
+            DiscordMessage = ctx?.Message
+        };
+        AudioPlaybackLogRepository.Add(playbackLog);
     }
 
     public static async Task PlayAsync(Uri audioUrl, DiscordGuild guild, DiscordMember member)
@@ -403,7 +412,7 @@ public static class AudioManager
         await connection.PlayAsync(result.Tracks.FirstOrDefault());
     }
 
-    public static async Task PlayAsync(string audioName, DiscordGuild guild, DiscordMember member,
+    public static async Task PlayAsync(string audioName, DiscordGuild guild, DiscordMember member, CommandContext? ctx = null,
         bool searchById = false)
     {
         if (Uri.TryCreate(audioName, UriKind.Absolute, out var uriResult))
@@ -425,7 +434,7 @@ public static class AudioManager
                 $"No track was found with {(searchById ? "ID" : "name")}: {audioName}");
         }
 
-        await PlayAsync(audioTrack, guild, member);
+        await PlayAsync(audioTrack, guild, member, ctx);
     }
 
     public static async Task PlayAsync(string audioNameOrId, ulong guildId, ulong memberId,
@@ -433,7 +442,7 @@ public static class AudioManager
     {
         var guild = Client.FindGuild(guildId);
         var member = guild.Members[memberId];
-        await PlayAsync(audioNameOrId, guild, member, searchById);
+        await PlayAsync(audioNameOrId, guild, member, searchById: searchById);
     }
 
     #endregion

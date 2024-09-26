@@ -34,6 +34,8 @@ public static class Constants
     public const string NotConnectedToVoiceLog = "LeaveAsync() called when bot not in a voice channel";
     public const string NotConnectedToVoiceMessage = "Not connected to any channel.";
 
+    // TODO All DB collection init logs should be using this format string
+    public const string DbCollectionInitializedFormatString = "{0} collection initialized";
     public const string DbCollectionInitializedAudioTracks = "AudioTrack collection initialized";
     public const string DbCollectionInitializedReactionImages = "ReactionImage collection initialized";
     public const string DbCollectionInitializedBotSettings = "BotSetting collection initialized";
