@@ -15,14 +15,13 @@ public class AudioPlaybackLogRepository
     static AudioPlaybackLogRepository()
     {
         var collection = MongoDbManager.Database.GetCollection<AudioPlaybackLog>(AudioPlaybackLog.CollectionName);
-        // TODO Create TTL index?
         AudioPlaybackLogCollection = collection;
         Log.Information(string.Format(Constants.DbCollectionInitializedFormatString, AudioPlaybackLog.CollectionName));
     }
 
     public static IEnumerable<AudioPlaybackLog> GetUserRecents(ulong userId)
     {
-        return AudioPlaybackLogCollection.Find(t => t.DiscordMember.Id == userId).ToEnumerable();
+        return AudioPlaybackLogCollection.Find(t => t.UserId == userId).ToEnumerable();
     }
 
     public static async void Add(AudioPlaybackLog AudioPlaybackLog)

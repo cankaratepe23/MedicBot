@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
 using MimeTypes;
+using System.Diagnostics;
+using MedicBot.Model;
 
 namespace MedicBot.Controller;
 
@@ -80,6 +82,30 @@ public class AudioController : ControllerBase
         }
 
         return Ok();
+    }
+
+    [HttpGet("Recents")]
+    [Authorize]
+    public IActionResult Recents()
+    {
+        try
+        {
+            var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
+            Log.Debug("User's ID is: {UserId}", userClaim.Value);
+            var userId = Convert.ToUInt64(userClaim.Value);
+            var userFavoriteTracks = UserManager.GetFavoriteTrackIds(userId);
+            var recentTracks = AudioManager.GetRecentTracks(Convert.ToUInt64(userClaim.Value))
+                                            .Select(t => new RecentAudioTrackDto
+                                            {
+                                                AudioTrackDto = t.AudioTrack?.ToDto().Enrich(userFavoriteTracks.Contains(t.AudioTrack.Id)),
+                                                Count = t.Count
+                                            });
+            return Ok(recentTracks);
+        }
+        catch (Exception e)
+        {
+            return BadRequest(e.Message);
+        }
     }
 
     [HttpGet]

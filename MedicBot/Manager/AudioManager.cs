@@ -203,6 +203,23 @@ public static class AudioManager
         return LastPlayedTracks.TryGetValue(guild.Id, out var tracks) ? tracks.Reverse() : null;
     }
 
+    public static IEnumerable<RecentAudioTrack> GetRecentTracks(DiscordUser user)
+    {
+        return GetRecentTracks(user.Id);
+    }
+
+    public static IEnumerable<RecentAudioTrack> GetRecentTracks(ulong userId)
+    {
+        var recents = AudioPlaybackLogRepository.GetUserRecents(userId)
+                                                .GroupBy(l => l.AudioTrack.Id)
+                                                .Select(g => new RecentAudioTrack()
+                                                    {
+                                                        AudioTrack = g.First().AudioTrack,
+                                                        Count = g.Count()
+                                                    });
+        return recents;
+    }
+
     private static async Task<LavalinkGuildConnection> GetLavalinkConnection(DiscordGuild guild)
     {
         var lava = Client.GetLavalink();
@@ -378,8 +395,7 @@ public static class AudioManager
         {
             Timestamp = DateTime.UtcNow,
             AudioTrack = audioTrack,
-            DiscordMember = member,
-            DiscordMessage = ctx?.Message
+            UserId = member.Id
         };
         AudioPlaybackLogRepository.Add(playbackLog);
     }

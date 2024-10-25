@@ -19,6 +19,5 @@ public class AudioPlaybackLog
     public ObjectId Id { get; set; }
     public DateTime Timestamp { get; set; }
     public AudioTrack AudioTrack { get; set; }
-    public DiscordMember DiscordMember { get; set; }
-    public DiscordMessage? DiscordMessage { get; set; }
+    public ulong? UserId { get; set; }
 }

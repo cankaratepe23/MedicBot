@@ -181,6 +181,22 @@ public class AudioCommands : BaseCommandModule
         }
     }
 
+    [Command("recents")]
+    public async Task RecentsCommand(CommandContext ctx)
+    {
+        try
+        {
+            var recentTracks = AudioManager.GetRecentTracks(ctx.User);
+            var recentTrackNames = recentTracks.Select(t => t.AudioTrack?.Name);
+            await ctx.Channel.SendPaginatedMessageAsync(ctx.User, ctx.Client.GetInteractivity().GeneratePagesInEmbed(string.Join("\n", recentTracks)));
+        }
+        catch (Exception e)
+        {
+            await ctx.RespondAsync(e.Message);
+            throw;
+        }
+    }
+
     [Command("history")]
     public async Task HistoryCommand(CommandContext ctx)
     {
