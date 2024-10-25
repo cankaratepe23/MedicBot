@@ -94,11 +94,11 @@ public class AudioController : ControllerBase
             Log.Debug("User's ID is: {UserId}", userClaim.Value);
             var userId = Convert.ToUInt64(userClaim.Value);
             var userFavoriteTracks = UserManager.GetFavoriteTrackIds(userId);
-            var recentTracks = AudioManager.GetRecentTracks(Convert.ToUInt64(userClaim.Value))
+            var recentTracks = AudioManager.GetRecentAudioTracks(Convert.ToUInt64(userClaim.Value))
                                             .Select(t => new RecentAudioTrackDto
                                             {
                                                 AudioTrackDto = t.AudioTrack?.ToDto().Enrich(userFavoriteTracks.Contains(t.AudioTrack.Id)),
-                                                Count = t.Count
+                                                Order = t.Count
                                             });
             return Ok(recentTracks);
         }

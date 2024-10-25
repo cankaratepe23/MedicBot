@@ -186,7 +186,7 @@ public class AudioCommands : BaseCommandModule
     {
         try
         {
-            var recentTracks = AudioManager.GetRecentTracks(ctx.User);
+            var recentTracks = AudioManager.GetRecentAudioTracks(ctx.User);
             var recentTrackNames = recentTracks.Select(t => t.AudioTrack?.Name);
             await ctx.Channel.SendPaginatedMessageAsync(ctx.User, ctx.Client.GetInteractivity().GeneratePagesInEmbed(string.Join("\n", recentTracks)));
         }

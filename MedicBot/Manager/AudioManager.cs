@@ -203,20 +203,36 @@ public static class AudioManager
         return LastPlayedTracks.TryGetValue(guild.Id, out var tracks) ? tracks.Reverse() : null;
     }
 
-    public static IEnumerable<RecentAudioTrack> GetRecentTracks(DiscordUser user)
+    public static IEnumerable<RecentAudioTrack> GetFrequentlyUsedTracks(DiscordUser user)
     {
-        return GetRecentTracks(user.Id);
+        return GetFrequentlyUsedTracks(user.Id);
     }
 
-    public static IEnumerable<RecentAudioTrack> GetRecentTracks(ulong userId)
+    public static IEnumerable<RecentAudioTrack> GetFrequentlyUsedTracks(ulong userId)
     {
-        var recents = AudioPlaybackLogRepository.GetGlobalRecents()
+        var recents = AudioPlaybackLogRepository.GetGlobalLog()
                                                 .GroupBy(l => l.AudioTrack.Id)
+                                                .OrderBy(g => g.Count())
+                                                .Take(50)
                                                 .Select(g => new RecentAudioTrack()
                                                     {
                                                         AudioTrack = g.First().AudioTrack,
                                                         Count = g.Count()
                                                     });
+        return recents;
+    }
+
+    public static IEnumerable<RecentAudioTrack> GetRecentAudioTracks(DiscordUser user)
+    {
+        return GetRecentAudioTracks(user.Id);
+    }
+
+    public static IEnumerable<RecentAudioTrack> GetRecentAudioTracks(ulong userId)
+    {
+        var recents = AudioPlaybackLogRepository.GetGlobalLog()
+                                                .OrderByDescending(l => l.Timestamp)
+                                                .Take(50)
+                                                .Select(l => new RecentAudioTrack() { AudioTrack = l.AudioTrack, Count = l.Timestamp.Ticks });
         return recents;
     }
 
