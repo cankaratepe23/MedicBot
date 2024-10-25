@@ -19,6 +19,10 @@ public class AudioPlaybackLogRepository
         Log.Information(string.Format(Constants.DbCollectionInitializedFormatString, AudioPlaybackLog.CollectionName));
     }
 
+    public static IEnumerable<AudioPlaybackLog> GetGlobalRecents()
+    {
+        return AudioPlaybackLogCollection.Find(_ => true).ToEnumerable();
+    }
     public static IEnumerable<AudioPlaybackLog> GetUserRecents(ulong userId)
     {
         return AudioPlaybackLogCollection.Find(t => t.UserId == userId).ToEnumerable();

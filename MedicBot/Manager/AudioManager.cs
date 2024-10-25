@@ -210,7 +210,7 @@ public static class AudioManager
 
     public static IEnumerable<RecentAudioTrack> GetRecentTracks(ulong userId)
     {
-        var recents = AudioPlaybackLogRepository.GetUserRecents(userId)
+        var recents = AudioPlaybackLogRepository.GetGlobalRecents()
                                                 .GroupBy(l => l.AudioTrack.Id)
                                                 .Select(g => new RecentAudioTrack()
                                                     {
