@@ -231,6 +231,7 @@ public static class AudioManager
     {
         var recents = AudioPlaybackLogRepository.GetGlobalLog()
                                                 .OrderByDescending(l => l.Timestamp)
+                                                .DistinctBy(l => l.AudioTrack.Id)
                                                 .Take(50)
                                                 .Select(l => new RecentAudioTrack() { AudioTrack = l.AudioTrack, Count = l.Timestamp.Ticks });
         return recents;
