@@ -8,12 +8,14 @@ using DSharpPlus.Interactivity.Extensions;
 using DSharpPlus.Lavalink;
 using MedicBot.Commands;
 using MedicBot.EventHandler;
+using MedicBot.Hub;
 using MedicBot.Manager;
 using MedicBot.Repository;
 using MedicBot.Utils;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
@@ -40,6 +42,7 @@ internal static class Program
 
         var builder = WebApplication.CreateBuilder();
         builder.Services.AddControllers();
+        builder.Services.AddSignalR().AddJsonProtocol();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
         builder.Services.AddCors(options =>
@@ -204,6 +207,8 @@ internal static class Program
 
         app.MapControllers();
 
+        app.MapHub<PlaybackHub>("/PlaybackHub");
+
         #endregion
 
         #region Logger Config
@@ -282,7 +287,13 @@ internal static class Program
             Directory.CreateDirectory(tempFilesPath);
         }
 
-        AudioManager.Init(discord, audioTracksPath, tempFilesPath);
+
+        var hubContext = app.Services.GetService<IHubContext<PlaybackHub, IPlaybackClient>>();
+        if (hubContext == null)
+        {
+            throw new InvalidOperationException("Could not instantiate the SignalR Hub context");   
+        }
+        AudioManager.Init(discord, hubContext, audioTracksPath, tempFilesPath);
         ImageManager.Init(discord, imagesPath, tempFilesPath);
         VoiceStateHandler.Init(discord);
 

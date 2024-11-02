@@ -3,9 +3,11 @@ using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
 using DSharpPlus.Lavalink;
 using MedicBot.Exceptions;
+using MedicBot.Hub;
 using MedicBot.Model;
 using MedicBot.Repository;
 using MedicBot.Utils;
+using Microsoft.AspNetCore.SignalR;
 using Serilog;
 using SharpCompress.Archives.SevenZip;
 using SharpCompress.Readers;
@@ -15,14 +17,16 @@ namespace MedicBot.Manager;
 public static class AudioManager
 {
     private static DiscordClient Client { get; set; } = null!;
+    private static IHubContext<PlaybackHub, IPlaybackClient> HubContext { get; set; } = null!;
     private static string AudioTracksPath { get; set; } = null!;
     private static string TempFilesPath { get; set; } = null!;
 
     private static Dictionary<ulong, Queue<AudioTrack>> LastPlayedTracks { get; } = new();
 
-    public static void Init(DiscordClient client, string tracksPath, string tempFilesPath)
+    public static void Init(DiscordClient client, IHubContext<PlaybackHub, IPlaybackClient> hubContext, string tracksPath, string tempFilesPath)
     {
         Client = client;
+        HubContext = hubContext;
         AudioTracksPath = tracksPath;
         TempFilesPath = tempFilesPath;
     }
@@ -415,6 +419,7 @@ public static class AudioManager
             UserId = member.Id
         };
         AudioPlaybackLogRepository.Add(playbackLog);
+        await HubContext.Clients.All.ReceiveRecentPlay(audioTrack.Id.ToString());
     }
 
     public static async Task PlayAsync(Uri audioUrl, DiscordGuild guild, DiscordMember member)
