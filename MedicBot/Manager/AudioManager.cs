@@ -370,9 +370,7 @@ public static class AudioManager
     #region Play
 
     public static async Task PlayAsync(AudioTrack audioTrack, DiscordGuild guild, DiscordMember member, CommandContext? ctx = null)
-    {
-        VoiceStateHandler.TrackerUserAddPoints(member);
-        
+    {        
         if (!UserManager.CanPlayAudio(member, audioTrack, out var reason))
         {
             Log.Warning("{Member} can not play the audio {AudioTrack}", member, audioTrack);

@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using DSharpPlus.Entities;
+using MedicBot.EventHandler;
 using MedicBot.Model;
 using MedicBot.Repository;
 using MedicBot.Utils;
@@ -18,6 +19,7 @@ public static class UserManager
 
     public static int GetPoints(DiscordUser user)
     {
+        VoiceStateHandler.TrackerUserAddPoints(user);
         return UserPointsRepository.GetPoints(user.Id);
     }
 
@@ -70,7 +72,7 @@ public static class UserManager
 
     public static bool CanPlayAudio(DiscordMember member, AudioTrack audioTrack, out string reason)
     {
-        var userPoints = UserPointsRepository.GetPoints(member.Id);
+        var userPoints = GetPoints(member);
         var audioPrice = audioTrack.CalculateAndDecreasePrice();
         var trackPrice = audioPrice;
 
