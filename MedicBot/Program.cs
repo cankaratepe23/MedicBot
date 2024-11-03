@@ -49,13 +49,21 @@ internal static class Program
         {
             options.AddPolicy("MedicBotPolicy", policyBuilder =>
             {
-                policyBuilder.WithOrigins("https://medicbot.comaristan.com").WithMethods("GET", "POST", "DELETE").AllowCredentials();
+                policyBuilder.WithOrigins("https://medicbot.comaristan.com").WithMethods("GET", "POST", "DELETE").WithHeaders("x-requested-with","x-signalr-user-agent").AllowCredentials();
+                
                 if (builder.Environment.IsDevelopment())
                 {
-                    policyBuilder.WithOrigins("https://127.0.0.1:3000").WithMethods("GET", "POST", "DELETE").AllowCredentials();
+                    policyBuilder.WithOrigins("https://127.0.0.1:3000");
                 }
             });
         });
+        var webSocketOptions = new WebSocketOptions();
+        webSocketOptions.AllowedOrigins.Add("https://medicbot.comaristan.com");
+        if (builder.Environment.IsDevelopment())
+        {
+            webSocketOptions.AllowedOrigins.Add("https://127.0.0.1:3000");
+        }
+
         builder.Configuration.AddEnvironmentVariables("MedicBot_");
         var clientId = Environment.GetEnvironmentVariable(Constants.OAuthClientIdEnvironmentVariableName);
         var clientSecret = Environment.GetEnvironmentVariable(Constants.OAuthClientSecretEnvironmentVariableName);
@@ -194,6 +202,8 @@ internal static class Program
         app.UseHttpsRedirection();
 
         app.UseCors("MedicBotPolicy");
+
+        app.UseWebSockets(webSocketOptions);
 
         app.UseCookiePolicy(new CookiePolicyOptions
         {
