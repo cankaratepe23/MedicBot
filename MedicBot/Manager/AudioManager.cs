@@ -2,6 +2,7 @@
 using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
 using DSharpPlus.Lavalink;
+using MedicBot.EventHandler;
 using MedicBot.Exceptions;
 using MedicBot.Hub;
 using MedicBot.Model;
@@ -370,6 +371,8 @@ public static class AudioManager
 
     public static async Task PlayAsync(AudioTrack audioTrack, DiscordGuild guild, DiscordMember member, CommandContext? ctx = null)
     {
+        VoiceStateHandler.TrackerUserAddPoints(member);
+        
         if (!UserManager.CanPlayAudio(member, audioTrack, out var reason))
         {
             Log.Warning("{Member} can not play the audio {AudioTrack}", member, audioTrack);

@@ -106,6 +106,41 @@ public static class VoiceStateHandler
         }
     }
 
+    public static void TrackerUserAddPoints(DiscordUser user)
+    {
+        UserVoiceStateInfo? voiceStateInfo = null;
+        Dictionary<ulong, UserVoiceStateInfo>? usersDict = null;
+        foreach (var channelIdUsersDictPair in VoiceStateTrackers)
+        {
+            var currentChannelId = channelIdUsersDictPair.Key;
+            var currentUsersDict = channelIdUsersDictPair.Value;
+            foreach (var userIdStateInfoPair in currentUsersDict)
+            {
+                var currentUserId = userIdStateInfoPair.Key;
+                var currentUserState = userIdStateInfoPair.Value;
+                if (currentUserId == user.Id)
+                {
+                    voiceStateInfo = currentUserState;
+                    usersDict = currentUsersDict;
+                    break;
+                }
+            }
+        }
+        if (voiceStateInfo == null || usersDict == null)
+        {
+            Log.Debug("{User} is not being tracked, nothing to add", user);
+            return;
+        }
+
+        Log.Debug("Found tracked user info {UserVoiceStateInfo}", voiceStateInfo);
+        voiceStateInfo.FinishTime = DateTime.UtcNow;
+        var pointsToAdd = voiceStateInfo.GetTimeSpentInVoice();
+        UserManager.AddPoints(voiceStateInfo.User, pointsToAdd);
+        Log.Information("Added {Points} points to {User}", pointsToAdd, voiceStateInfo.User);
+
+        usersDict[user.Id] = new UserVoiceStateInfo(user) { StartTime = DateTime.UtcNow };
+    }
+
     private static void TrackerRemoveUser(DiscordUser eventUser, ulong channelId)
     {
         Log.Debug("Removing user {User} from the tracker list", eventUser);
@@ -117,7 +152,9 @@ public static class VoiceStateHandler
         }
 
         voiceStateInfo.FinishTime = DateTime.UtcNow;
-        UserManager.AddPoints(voiceStateInfo.User, voiceStateInfo.GetTimeSpentInVoice());
+        var pointsToAdd = voiceStateInfo.GetTimeSpentInVoice();
+        UserManager.AddPoints(voiceStateInfo.User, pointsToAdd);
+        Log.Information("Added {Points} points to {User}", pointsToAdd, voiceStateInfo.User);
         VoiceStateTrackers[channelId].Remove(eventUser.Id);
     }
 
