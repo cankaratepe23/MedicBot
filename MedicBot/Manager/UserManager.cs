@@ -30,6 +30,16 @@ public static class UserManager
 
     public static void DeductPoints(DiscordUser member, int points)
     {
+        if (member.Id == Constants.OwnerId)
+        {
+            var sillyZonkaWonkaValue = SettingsRepository.GetValue<string>(Constants.SillyZonkaWonka);
+            var isSillyZonkaWonka = sillyZonkaWonkaValue != null && sillyZonkaWonkaValue.Trim().ToLowerInvariant() == "true";
+            if (isSillyZonkaWonka)
+            {
+                return;
+            }
+        }
+
         UserPointsRepository.AddPoints(member.Id, (-1) * points);
         Log.Debug("Removed {Points} points from {Member}", points, member);
     }
@@ -78,6 +88,17 @@ public static class UserManager
 
         var userHasEnoughPoints = userPoints >= trackPrice;
         var userIsNotMuted = !IsMuted(member);
+
+        if (member.Id == Constants.OwnerId)
+        {
+            var sillyZonkaWonkaValue = SettingsRepository.GetValue<string>(Constants.SillyZonkaWonka);
+            var isSillyZonkaWonka = sillyZonkaWonkaValue != null && sillyZonkaWonkaValue.Trim().ToLowerInvariant() == "true";
+            if (isSillyZonkaWonka)
+            {
+                userHasEnoughPoints = true;
+                userIsNotMuted = true;
+            }
+        }
 
         var reasonBuilder = new StringBuilder();
         if (!userHasEnoughPoints)
