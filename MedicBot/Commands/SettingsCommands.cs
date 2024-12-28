@@ -19,7 +19,7 @@ public class SettingsCommands : BaseCommandModule
             return;
         }
 
-        SettingsRepository.Set(key, value);
+        SettingsRepository.Set(key, value, ctx.IsPrivateChatWithOwner());
         await ctx.Message.RespondThumbsUpAsync();
     }
 
@@ -33,7 +33,7 @@ public class SettingsCommands : BaseCommandModule
     [Command("get")]
     public async Task SettingGetCommand(CommandContext ctx, string key)
     {
-        var botSetting = SettingsRepository.Get(key);
+        var botSetting = SettingsRepository.Get(key, ctx.IsPrivateChatWithOwner());
         if (botSetting != null)
         {
             await ctx.RespondAsync($"Setting {key} has value: {botSetting.Value}");
@@ -47,7 +47,7 @@ public class SettingsCommands : BaseCommandModule
     [Command("get")]
     public async Task SettingGetCommand(CommandContext ctx)
     {
-        var allSettings = SettingsRepository.All();
+        var allSettings = SettingsRepository.All(ctx.IsPrivateChatWithOwner());
         var builder = new DiscordEmbedBuilder().WithTitle("MedicBot Settings");
         foreach (var botSetting in allSettings)
         {

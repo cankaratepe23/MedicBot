@@ -11,6 +11,7 @@ public static class Constants
     public const string ImagesPath = @"img";
     public const string TempFilesPath = @"temp";
 
+    public const ulong OwnerId = 134336937224830977;
     public const string LavalinkPassword = "5aJCTF!Z2&*853#79r7!xind*u^2LWy";
     private const string LavalinkHost = "127.0.0.1";
     private const int LavalinkPort = 3332;
@@ -49,11 +50,15 @@ public static class Constants
     public const string PriceIncreasePerUse = "price_increase_per_use";
     public const string PriceDecreasePerMinute = "price_decrease_per_minute";
     public const string PriceMaximum = "price_maximum";
+    public const string RandomTimeout = "random_timeout";
+    public const string SillyZonkaWonka = "silly_zonka_wonka";
 
     public static readonly HashSet<string> ObservedSettingKeys = new() {MinNumberOfUsersNeededToEarnPoints};
 
     public static readonly HashSet<string>
         IntegerSettingKeys = new() {MinNumberOfUsersNeededToEarnPoints, DefaultScore, PriceIncreasePerUse, PriceDecreasePerMinute, PriceMaximum};
+
+    public static readonly HashSet<string> HiddenSettingsKeys = new() {SillyZonkaWonka};
 
     public static readonly char[] InvalidFileNameChars =
     {

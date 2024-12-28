@@ -19,12 +19,23 @@ public static class SettingsRepository
         Init(Constants.PriceIncreasePerUse, 1);
         Init(Constants.PriceDecreasePerMinute, 1);
         Init(Constants.PriceMaximum, 100);
+        Init(Constants.RandomTimeout, -1);
+        Init(Constants.SillyZonkaWonka, false);
         Log.Information(Constants.DbCollectionInitializedBotSettings);
     }
 
-    public static BotSetting? Get(string key)
+    public static BotSetting? Get(string key, bool includeHidden = false)
     {
-        return SettingsCollection.Find(s => s.Key == key).FirstOrDefault();
+        var result = SettingsCollection.Find(s => s.Key == key).FirstOrDefault();
+        if (result != null && result.Key != null)
+        {
+            if (!includeHidden && Constants.HiddenSettingsKeys.Contains(result.Key))
+            {
+                result = null;
+            }
+        }
+
+        return result;
     }
 
     public static T? GetValue<T>(string key)
@@ -34,14 +45,19 @@ public static class SettingsRepository
         return (T?) botSetting?.Value;
     }
 
-    public static IEnumerable<BotSetting> All()
+    public static IEnumerable<BotSetting> All(bool includeHidden = false)
     {
-        return SettingsCollection.Find(FilterDefinition<BotSetting>.Empty).ToEnumerable();
+        var allSettings = SettingsCollection.Find(FilterDefinition<BotSetting>.Empty).ToEnumerable();
+        if (!includeHidden)
+        {
+            allSettings = allSettings.Where(s => s.Key != null && !Constants.HiddenSettingsKeys.Contains(s.Key));
+        }
+        return allSettings;
     }
 
-    public static void Set(string key, object value)
+    public static void Set(string key, object value, bool includeHidden = false)
     {
-        var botSetting = Get(key);
+        var botSetting = Get(key, includeHidden);
         if (Constants.IntegerSettingKeys.Contains(key))
         {
             value = Convert.ToInt32(value);
@@ -65,7 +81,7 @@ public static class SettingsRepository
 
     private static void Init(string key, object value)
     {
-        var botSetting = Get(key);
+        var botSetting = Get(key, true);
         if (Constants.IntegerSettingKeys.Contains(key))
         {
             value = Convert.ToInt32(value);

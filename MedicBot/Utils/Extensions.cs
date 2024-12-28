@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using DSharpPlus;
+using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using MedicBot.Exceptions;
@@ -88,6 +89,11 @@ public static class Extensions
     public static bool IsDisconnectEvent(this VoiceStateUpdateEventArgs e)
     {
         return (e.After == null || e.After.Channel == null) && e.Before != null && e.Before.Channel != null;
+    }
+
+    public static bool IsPrivateChatWithOwner(this CommandContext ctx)
+    {
+        return ctx.Channel.IsPrivate && ctx.Message.Author.Id == Constants.OwnerId;
     }
 
     public static AudioTrackDto ToDto(this AudioTrack audioTrack)
