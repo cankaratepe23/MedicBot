@@ -40,7 +40,7 @@ public static class SettingsRepository
 
     public static T? GetValue<T>(string key)
     {
-        var botSetting = Get(key);
+        var botSetting = Get(key, true);
 
         return (T?) botSetting?.Value;
     }

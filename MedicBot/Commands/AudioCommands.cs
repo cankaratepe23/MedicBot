@@ -290,11 +290,11 @@ public class AudioCommands : BaseCommandModule
 
     [Command("balance")]
     [Aliases("puan", "points")]
-    public async Task BalanceCommand(CommandContext ctx, DiscordMember? member = null)
+    public async Task BalanceCommand(CommandContext ctx, DiscordUser? member = null)
     {
         if (member == null)
         {
-            member = (DiscordMember) ctx.User;
+            member = ctx.User;
         }
 
         var memberPoints = Convert.ToDouble(UserManager.GetPoints(member));
