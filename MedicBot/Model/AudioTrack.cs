@@ -1,6 +1,4 @@
-﻿using MedicBot.Repository;
-using MedicBot.Utils;
-using MongoDB.Bson;
+﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson.Serialization.IdGenerators;
 
@@ -17,11 +15,11 @@ public class AudioTrack
     }
 
     public AudioTrack(string name, string path, ulong ownerId) : this(name, new List<string>(), new List<string>(),
-        path, ownerId, 0)
+        path, ownerId, 0, false)
     {
     }
 
-    public AudioTrack(string name, List<string> aliases, List<string> tags, string path, ulong ownerId, int price = 0)
+    public AudioTrack(string name, List<string> aliases, List<string> tags, string path, ulong ownerId, int price = 0, bool isGlobal = false)
     {
         Id = new ObjectId();
         Name = name;
@@ -30,6 +28,7 @@ public class AudioTrack
         Path = path;
         OwnerId = ownerId;
         Price = price;
+        IsGlobal = isGlobal;
     }
 
     [BsonId(IdGenerator = typeof(ObjectIdGenerator))]
@@ -44,6 +43,7 @@ public class AudioTrack
     public DateTime? LastPriceUpdateAt { get; set; }
 
     public int Price { get; set; }
+    public bool IsGlobal { get; set; }
 
     public override string ToString()
     {

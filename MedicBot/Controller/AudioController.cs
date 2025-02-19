@@ -3,13 +3,11 @@ using System.Security.Authentication;
 using System.Security.Claims;
 using MedicBot.Exceptions;
 using MedicBot.Manager;
-using MedicBot.Repository;
 using MedicBot.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
 using MimeTypes;
-using System.Diagnostics;
 using MedicBot.Model;
 
 namespace MedicBot.Controller;
@@ -110,20 +108,19 @@ public class AudioController : ControllerBase
 
     [HttpGet]
     [Authorize]
-    public IActionResult Get([FromQuery] bool? enriched)
+    public async Task<IActionResult> Get([FromQuery] bool? enriched)
     {
-        // TODO Use Manager instead of directly using repository
-        // TODO Sort results in API instead of doing it client-side
+        var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
+        var userId = Convert.ToUInt64(userClaim.Value);
         try
         {
             if (enriched != null && enriched.Value)
             {
                 // TODO Change caching logic to include enriched endpoint
-                var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
-                var userId = Convert.ToUInt64(userClaim.Value);
                 var userFavoriteTracks = UserManager.GetFavoriteTrackIds(userId);
-                var allTracks = AudioRepository.All().Select(t => t.ToDto().Enrich(userFavoriteTracks.Contains(t.Id)));
-                return Ok(allTracks);
+                var allTracksToEnrich = await AudioManager.FindAsync(string.Empty, userId: userId);
+                var allTrackDtosEnriched = allTracksToEnrich.Select(t => t.ToDto().Enrich(userFavoriteTracks.Contains(t.Id)));
+                return Ok(allTrackDtosEnriched);
             }
             
             var lastUpdate = AudioManager.GetLatestUpdateTime();
@@ -144,7 +141,8 @@ public class AudioController : ControllerBase
                 }
             }
 
-            return Ok(AudioRepository.All().Select(t => t.ToDto()));
+            var allTracks = await AudioManager.FindAsync(string.Empty, userId: userId);
+            return Ok(allTracks.Select(t => t.ToDto()));
         }
         catch (Exception e)
         {

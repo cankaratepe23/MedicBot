@@ -12,6 +12,7 @@ public static class Constants
     public const string TempFilesPath = @"temp";
 
     public const ulong OwnerId = 134336937224830977;
+    public static readonly HashSet<ulong> WhitelistedGuilds = new() { 463052720509812736 };
     public const string LavalinkPassword = "5aJCTF!Z2&*853#79r7!xind*u^2LWy";
     private const string LavalinkHost = "127.0.0.1";
     private const int LavalinkPort = 3332;
@@ -52,6 +53,7 @@ public static class Constants
     public const string PriceMaximum = "price_maximum";
     public const string RandomTimeout = "random_timeout";
     public const string SillyZonkaWonka = "silly_zonka_wonka";
+    public const string GlobalTesters = "global_testers";
 
     public static readonly HashSet<string> ObservedSettingKeys = new() {MinNumberOfUsersNeededToEarnPoints};
 

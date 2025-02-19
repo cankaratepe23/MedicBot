@@ -145,9 +145,10 @@ public static class AudioManager
         File.Delete(audioTrack.Path);
     }
 
-    public static async Task<IEnumerable<AudioTrack>> FindAsync(string searchQuery, long limit = 10, DiscordGuild? guild = null)
+    public static async Task<IEnumerable<AudioTrack>> FindAsync(string searchQuery, long limit = 10, DiscordGuild? guild = null, ulong? userId = null)
     {
-        // TODO Sort results (check if needed first)
+        var canGetNonGlobals = CanUserGetNonGlobals(userId);
+
         string? tag = null;
         searchQuery = searchQuery.Trim();
         if (searchQuery.Contains(':'))
@@ -161,11 +162,11 @@ public static class AudioManager
         {
             if (limit == 1)
             {
-                var randomTrack = await AudioRepository.Random(tag);
+                var randomTrack = await AudioRepository.Random(tag, canGetNonGlobals);
                 return new List<AudioTrack> { randomTrack };
             }
 
-            return AudioRepository.All(tag);
+            return AudioRepository.All(tag).Where(t => canGetNonGlobals || t.IsGlobal );
         }
 
         if (searchQuery == "!!" && guild != null)
@@ -176,10 +177,10 @@ public static class AudioManager
 
         if (searchQuery.StartsWith('\"') && searchQuery.EndsWith('"'))
         {
-            return AudioRepository.FindAllByName(searchQuery.Trim('"'), tag);
+            return AudioRepository.FindAllByName(searchQuery.Trim('"'), tag).Where(t => canGetNonGlobals || t.IsGlobal );
         }
 
-        return await AudioRepository.FindMany(searchQuery, limit, tag);
+        return (await AudioRepository.FindMany(searchQuery, limit, tag)).Where(t => canGetNonGlobals || t.IsGlobal );
     }
 
     public static AudioTrack? FindById(string id)
@@ -234,7 +235,9 @@ public static class AudioManager
 
     public static IEnumerable<RecentAudioTrack> GetRecentAudioTracks(ulong userId)
     {
+        var canGetNonGlobals = CanUserGetNonGlobals(userId);
         var recents = AudioPlaybackLogRepository.GetGlobalLog()
+                                                .Where(l => canGetNonGlobals || l.AudioTrack.IsGlobal)
                                                 .OrderByDescending(l => l.Timestamp)
                                                 .DistinctBy(l => l.AudioTrack.Id)
                                                 .Take(50)
@@ -272,6 +275,32 @@ public static class AudioManager
         return connection;
     }
 
+    private static bool CanUserGetNonGlobals(ulong? userId)
+    {
+        if (userId.HasValue)
+        {
+            var globalTesters = SettingsRepository.GetValue<string>(Constants.GlobalTesters);
+
+            if (!string.IsNullOrWhiteSpace(globalTesters))
+            {
+                var testerIds = globalTesters.Split(',').Select(s => Convert.ToUInt64(s));
+                if (testerIds.Contains(userId.Value))
+                {
+                    return false;
+                }
+            }
+
+            var botGuilds = Client.Guilds;
+            var whitelistedMembers = botGuilds.Where(g => Constants.WhitelistedGuilds.Contains(g.Key))
+                                        .Select(g => g.Value.Members);
+            var canGetNonGlobals = whitelistedMembers.Any(g => g.ContainsKey(userId.Value));
+            return canGetNonGlobals;
+        }
+        else
+        {
+            return false;
+        }
+    }
     // TODO Add summary docs for everything
 
     #region Join

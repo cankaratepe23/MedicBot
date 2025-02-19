@@ -101,7 +101,7 @@ public class AudioRepository
         return closestMatch;
     }
 
-    public static IEnumerable<AudioTrack> FindAllByName(string searchTerm, string? tag = null)
+    public static IEnumerable<AudioTrack> FindAllByName(string searchTerm, string? tag = null, bool canGetNonGlobals = false)
     {
         // Check if this method should "ignore" limits from Manager class
         if (string.IsNullOrWhiteSpace(tag))
@@ -124,19 +124,24 @@ public class AudioRepository
 
     public static IEnumerable<AudioTrack> All(string? tag = null)
     {
-        return string.IsNullOrWhiteSpace(tag)
-            ? TracksCollection.Find(FilterDefinition<AudioTrack>.Empty).ToEnumerable()
-            : TracksCollection.Find(t => t.Tags.Contains(tag)).ToList();
+        if (string.IsNullOrWhiteSpace(tag))
+        {
+            return TracksCollection.Find(FilterDefinition<AudioTrack>.Empty).ToEnumerable();
+        }
+        else
+        {
+            return TracksCollection.Find(t => t.Tags.Contains(tag)).ToList();
+        }
     }
 
-    public static async Task<AudioTrack> Random(string? tag = null)
+    public static async Task<AudioTrack> Random(string? tag = null, bool getNonGlobals = false)
     {
         if (string.IsNullOrWhiteSpace(tag))
         {
-            return await TracksCollection.AsQueryable().Sample(1).FirstOrDefaultAsync();
+            return await GetTracksQueryable(getNonGlobals).Sample(1).FirstOrDefaultAsync();
         }
 
-        return await TracksCollection.AsQueryable().Where(t => t.Tags.Contains(tag)).Sample(1).FirstOrDefaultAsync();
+        return await GetTracksQueryable(getNonGlobals).Where(t => t.Tags.Contains(tag)).Sample(1).FirstOrDefaultAsync();
     }
 
     public static List<AudioTrack> FindAllWithAllTags(List<string> tags)
@@ -147,6 +152,7 @@ public class AudioRepository
 
     public static List<AudioTrack> GetOrderedByDate(long limit)
     {
+        // TODO Maybe getNonGloblas should be implemented 
         return TracksCollection.Aggregate()
             .SortByDescending(t => t.Id)
             .Limit(limit)
@@ -177,5 +183,10 @@ public class AudioRepository
     public static void Delete(ObjectId id)
     {
         TracksCollection.DeleteOne(t => t.Id == id);
+    }
+
+    private static IMongoQueryable<AudioTrack> GetTracksQueryable(bool includeNonGlobals)
+    {
+        return TracksCollection.AsQueryable().Where(t => includeNonGlobals || t.IsGlobal);
     }
 }
