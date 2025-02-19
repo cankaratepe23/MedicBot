@@ -148,7 +148,7 @@ public class AudioCommands : BaseCommandModule
     {
         try
         {
-            var matchingTracks = (await AudioManager.FindAsync(searchTerm, limit)).ToList();
+            var matchingTracks = (await AudioManager.FindAsync(searchTerm, limit, ctx.Guild, ctx.User.Id)).ToList();
             if (matchingTracks.Count == 0)
             {
                 await ctx.RespondAsync("No matching tracks found");
@@ -225,7 +225,7 @@ public class AudioCommands : BaseCommandModule
     {
         try
         {
-            var foundTrack = (await AudioManager.FindAsync(audioName, 1, ctx.Guild)).FirstOrDefault();
+            var foundTrack = (await AudioManager.FindAsync(audioName, 1, ctx.Guild, ctx.User.Id)).FirstOrDefault();
             if (foundTrack == null)
             {
                 throw new AudioTrackNotFoundException(audioName, false);
@@ -309,7 +309,7 @@ public class AudioCommands : BaseCommandModule
     {
         try
         {
-            var matchingTracks = (await AudioManager.FindAsync(searchTerm, 1)).ToList();
+            var matchingTracks = (await AudioManager.FindAsync(searchTerm, 1, ctx.Guild, ctx.User.Id)).ToList();
             if (matchingTracks.Count == 0)
             {
                 await ctx.RespondAsync("No matching tracks found");
