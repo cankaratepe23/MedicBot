@@ -1,4 +1,5 @@
-﻿using DSharpPlus;
+﻿using System.Reflection.Metadata;
+using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
 using DSharpPlus.Lavalink;
@@ -147,7 +148,7 @@ public static class AudioManager
 
     public static async Task<IEnumerable<AudioTrack>> FindAsync(string searchQuery, long limit = 10, DiscordGuild? guild = null, ulong? userId = null)
     {
-        var canGetNonGlobals = CanUserGetNonGlobals(userId);
+        var canGetNonGlobals = CanGetNonGlobals(userId, guild);
 
         string? tag = null;
         searchQuery = searchQuery.Trim();
@@ -235,7 +236,7 @@ public static class AudioManager
 
     public static IEnumerable<RecentAudioTrack> GetRecentAudioTracks(ulong userId)
     {
-        var canGetNonGlobals = CanUserGetNonGlobals(userId);
+        var canGetNonGlobals = CanGetNonGlobals(userId);
         var recents = AudioPlaybackLogRepository.GetGlobalLog()
                                                 .Where(l => canGetNonGlobals || l.AudioTrack.IsGlobal)
                                                 .OrderByDescending(l => l.Timestamp)
@@ -275,8 +276,10 @@ public static class AudioManager
         return connection;
     }
 
-    private static bool CanUserGetNonGlobals(ulong? userId)
+    private static bool CanGetNonGlobals(ulong? userId, DiscordGuild? guild = null)
     {
+        bool canUserGetNonGlobals = false;
+        bool canGuildGetNonGlobals = false;
         if (userId.HasValue)
         {
             var globalTesters = SettingsRepository.GetValue<string>(Constants.GlobalTesters);
@@ -293,13 +296,15 @@ public static class AudioManager
             var botGuilds = Client.Guilds;
             var whitelistedMembers = botGuilds.Where(g => Constants.WhitelistedGuilds.Contains(g.Key))
                                         .Select(g => g.Value.Members);
-            var canGetNonGlobals = whitelistedMembers.Any(g => g.ContainsKey(userId.Value));
-            return canGetNonGlobals;
+            canUserGetNonGlobals = whitelistedMembers.Any(g => g.ContainsKey(userId.Value));
         }
-        else
+        
+        if (guild != null)
         {
-            return false;
+            canGuildGetNonGlobals = Constants.WhitelistedGuilds.Contains(guild.Id);
         }
+
+        return canUserGetNonGlobals || canGuildGetNonGlobals;
     }
     // TODO Add summary docs for everything
 
