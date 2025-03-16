@@ -69,17 +69,18 @@ public class AudioController : ControllerBase
         [FromQuery] bool searchById = false)
     {
         var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
+        int priceUsed = -1;
         Log.Debug("User's ID is: {UserId}", userClaim.Value);
         try
         {
-            await AudioManager.PlayAsync(audioNameOrId, guildId, Convert.ToUInt64(userClaim.Value), searchById);
+            priceUsed = await AudioManager.PlayAsync(audioNameOrId, guildId, Convert.ToUInt64(userClaim.Value), searchById);
         }
         catch (AudioTrackNotFoundException e)
         {
             return NotFound(e.Message);
         }
 
-        return Ok();
+        return Ok(priceUsed);
     }
 
     [HttpGet("Recents")]
