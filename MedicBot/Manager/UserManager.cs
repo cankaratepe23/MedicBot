@@ -30,14 +30,9 @@ public static class UserManager
 
     public static void DeductPoints(DiscordUser member, int points)
     {
-        if (member.Id == Constants.OwnerId)
+        if (IsSillyZonkaWonka(member))
         {
-            var sillyZonkaWonkaValue = SettingsRepository.GetValue<string>(Constants.SillyZonkaWonka);
-            var isSillyZonkaWonka = sillyZonkaWonkaValue != null && sillyZonkaWonkaValue.Trim().ToLowerInvariant() == "true";
-            if (isSillyZonkaWonka)
-            {
-                return;
-            }
+            return;
         }
 
         UserPointsRepository.AddPoints(member.Id, (-1) * points);
@@ -80,6 +75,18 @@ public static class UserManager
         return false;
     }
 
+    private static bool IsSillyZonkaWonka(DiscordUser user)
+    {
+        var sillyZonkaWonkaValue = SettingsRepository.GetValue<string>(Constants.SillyZonkaWonka);
+        if (string.IsNullOrWhiteSpace(sillyZonkaWonkaValue))
+        {
+            return false;
+        }
+        var sillyZonkaWonkas = sillyZonkaWonkaValue.Split(',').Select(s => Convert.ToUInt64(s));
+        var isSillyZonkaWonka = sillyZonkaWonkas.Contains(user.Id);
+        return isSillyZonkaWonka;
+    }
+
     public static bool CanPlayAudio(DiscordMember member, AudioTrack audioTrack, out string reason)
     {
         var userPoints = GetPoints(member);
@@ -89,15 +96,10 @@ public static class UserManager
         var userHasEnoughPoints = userPoints >= trackPrice;
         var userIsNotMuted = !IsMuted(member);
 
-        if (member.Id == Constants.OwnerId)
+        if (IsSillyZonkaWonka(member))
         {
-            var sillyZonkaWonkaValue = SettingsRepository.GetValue<string>(Constants.SillyZonkaWonka);
-            var isSillyZonkaWonka = sillyZonkaWonkaValue != null && sillyZonkaWonkaValue.Trim().ToLowerInvariant() == "true";
-            if (isSillyZonkaWonka)
-            {
-                userHasEnoughPoints = true;
-                userIsNotMuted = true;
-            }
+            userHasEnoughPoints = true;
+            userIsNotMuted = true;
         }
 
         var reasonBuilder = new StringBuilder();
