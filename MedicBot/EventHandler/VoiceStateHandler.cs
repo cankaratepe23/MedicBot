@@ -1,6 +1,8 @@
-﻿using DSharpPlus;
+﻿using System.Threading.Tasks;
+using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
+using DSharpPlus.Interactivity.Extensions;
 using MedicBot.Manager;
 using MedicBot.Repository;
 using MedicBot.Utils;
@@ -104,6 +106,12 @@ public static class VoiceStateHandler
         {
             TrackerRemoveUser(eventUser, channel.Id);
         }
+    }
+
+    public static async Task TrackerUserAddPoints(ulong userId)
+    {
+        var user = await Client.GetUserAsync(userId);
+        TrackerUserAddPoints(user);
     }
 
     public static void TrackerUserAddPoints(DiscordUser user)

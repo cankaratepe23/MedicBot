@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using System.Threading.Tasks;
 using DSharpPlus.Entities;
 using MedicBot.EventHandler;
 using MedicBot.Model;
@@ -21,6 +22,12 @@ public static class UserManager
     {
         VoiceStateHandler.TrackerUserAddPoints(user);
         return UserPointsRepository.GetPoints(user.Id);
+    }
+
+    public static async Task<int> GetPointsByIdAsync(ulong userId)
+    {
+        await VoiceStateHandler.TrackerUserAddPoints(userId);
+        return UserPointsRepository.GetPoints(userId);
     }
 
     public static void AddPoints(DiscordUser member, TimeSpan time)

@@ -1,5 +1,6 @@
 using System.Security.Authentication;
 using System.Security.Claims;
+using System.Threading.Tasks;
 using MedicBot.Manager;
 using MedicBot.Repository;
 using Microsoft.AspNetCore.Authorization;
@@ -13,7 +14,7 @@ public class UserController : ControllerBase
 {
     [HttpGet("@me/Favorites")]
     [Authorize]
-    public IActionResult Get()
+    public IActionResult GetFavorites()
     {
         var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
         var userId = Convert.ToUInt64(userClaim.Value);
@@ -23,7 +24,7 @@ public class UserController : ControllerBase
 
     [HttpPost("@me/Favorites/{trackId}")]
     [Authorize]
-    public IActionResult Post(string trackId)
+    public IActionResult AddFavorite(string trackId)
     {
         var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
         var userId = Convert.ToUInt64(userClaim.Value);
@@ -39,7 +40,7 @@ public class UserController : ControllerBase
 
     [HttpDelete("@me/Favorites/{trackId}")]
     [Authorize]
-    public IActionResult Delete(string trackId)
+    public IActionResult DeleteFavorite(string trackId)
     {
         var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
         var userId = Convert.ToUInt64(userClaim.Value);
@@ -52,6 +53,16 @@ public class UserController : ControllerBase
 
         UserFavoritesRepository.DeleteByUserAndTrackId(userId, track.Id);
         return Ok();
+    }
+
+    [HttpGet("@me/Balance")]
+    [Authorize]
+    public async Task<IActionResult> GetBalance()
+    {
+        var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
+        var userId = Convert.ToUInt64(userClaim.Value);
+        var userBalance = await UserManager.GetPointsByIdAsync(userId);
+        return Ok(userBalance);
     }
 
 }
