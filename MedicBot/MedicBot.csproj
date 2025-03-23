@@ -2,32 +2,32 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net7.0</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <LangVersion>11</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="AspNet.Security.OAuth.Discord" Version="7.0.4" />
-        <PackageReference Include="DSharpPlus" Version="4.4.6" />
-        <PackageReference Include="DSharpPlus.CommandsNext" Version="4.4.6" />
-        <PackageReference Include="DSharpPlus.Interactivity" Version="4.4.6" />
-        <PackageReference Include="DSharpPlus.Lavalink" Version="4.4.6" />
-        <PackageReference Include="DSharpPlus.SlashCommands" Version="4.4.6" />
-        <PackageReference Include="Fastenshtein" Version="1.0.0.8" />
-        <PackageReference Include="HtmlAgilityPack" Version="1.11.62" />
-        <PackageReference Include="Magick.NET-Q8-x64" Version="13.6.0" />
-        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="7.0.17" />
+        <PackageReference Include="AspNet.Security.OAuth.Discord" Version="8.3.0" />
+        <PackageReference Include="DSharpPlus" Version="4.5.0" />
+        <PackageReference Include="DSharpPlus.CommandsNext" Version="4.5.0" />
+        <PackageReference Include="DSharpPlus.Interactivity" Version="4.5.0" />
+        <PackageReference Include="DSharpPlus.Lavalink" Version="4.5.0" />
+        <PackageReference Include="DSharpPlus.SlashCommands" Version="4.5.0" />
+        <PackageReference Include="Fastenshtein" Version="1.0.10" />
+        <PackageReference Include="HtmlAgilityPack" Version="1.12.0" />
+        <PackageReference Include="Magick.NET-Q8-x64" Version="14.5.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.14" />
         <PackageReference Include="MimeTypeMapOfficial" Version="1.0.17" />
-        <PackageReference Include="MongoDB.Driver" Version="2.28.0" />
-        <PackageReference Include="Serilog" Version="3.1.1" />
-        <PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
-        <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
-        <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
-        <PackageReference Include="Serilog.Sinks.MongoDB" Version="6.0.0" />
-        <PackageReference Include="SharpCompress" Version="0.36.0" />
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+        <PackageReference Include="MongoDB.Driver" Version="3.2.1" />
+        <PackageReference Include="Serilog" Version="4.2.0" />
+        <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.0" />
+        <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+        <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+        <PackageReference Include="Serilog.Sinks.MongoDB" Version="7.0.0" />
+        <PackageReference Include="SharpCompress" Version="0.39.0" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="8.0.0" />
     </ItemGroup>
 
 </Project>

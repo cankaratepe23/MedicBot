@@ -185,7 +185,7 @@ public class AudioRepository
         TracksCollection.DeleteOne(t => t.Id == id);
     }
 
-    private static IMongoQueryable<AudioTrack> GetTracksQueryable(bool includeNonGlobals)
+    private static IQueryable<AudioTrack> GetTracksQueryable(bool includeNonGlobals)
     {
         return TracksCollection.AsQueryable().Where(t => includeNonGlobals || t.IsGlobal);
     }
