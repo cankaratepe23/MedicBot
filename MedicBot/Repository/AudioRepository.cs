@@ -51,6 +51,15 @@ public class AudioRepository
                         a => a.Name,
                         searchTerm,
                         new SearchFuzzyOptions {MaxEdits = 1}))
+                    .Should(Builders<AudioTrack>.Search.Autocomplete(
+                        a => a.Aliases,
+                        searchTerm,
+                        fuzzy: new SearchFuzzyOptions {MaxEdits = 1},
+                        score: Builders<AudioTrack>.SearchScore.Boost(3)))
+                    .Should(Builders<AudioTrack>.Search.Text(
+                        a => a.Aliases,
+                        searchTerm,
+                        new SearchFuzzyOptions {MaxEdits = 1}))
             )
             .Limit(limit).ToListAsync();
         return results;
