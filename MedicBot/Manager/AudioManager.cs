@@ -1,15 +1,17 @@
-﻿using System.Reflection.Metadata;
-using DSharpPlus;
+﻿using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
-using DSharpPlus.Lavalink;
-using MedicBot.EventHandler;
+using Lavalink4NET;
+using Lavalink4NET.Players;
+using Lavalink4NET.Rest;
+using Lavalink4NET.Rest.Entities.Tracks;
 using MedicBot.Exceptions;
 using MedicBot.Hub;
 using MedicBot.Model;
 using MedicBot.Repository;
 using MedicBot.Utils;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Options;
 using Serilog;
 using SharpCompress.Archives.SevenZip;
 using SharpCompress.Readers;
@@ -20,14 +22,16 @@ public static class AudioManager
 {
     private static DiscordClient Client { get; set; } = null!;
     private static IHubContext<PlaybackHub, IPlaybackClient> HubContext { get; set; } = null!;
+    private static IAudioService AudioService { get; set; } = null!;
     private static string AudioTracksPath { get; set; } = null!;
     private static string TempFilesPath { get; set; } = null!;
 
     private static Dictionary<ulong, Queue<AudioTrack>> LastPlayedTracks { get; } = new();
 
-    public static void Init(DiscordClient client, IHubContext<PlaybackHub, IPlaybackClient> hubContext, string tracksPath, string tempFilesPath)
+    public static void Init(DiscordClient client, IAudioService audioService, IHubContext<PlaybackHub, IPlaybackClient> hubContext, string tracksPath, string tempFilesPath)
     {
         Client = client;
+        AudioService = audioService;
         HubContext = hubContext;
         AudioTracksPath = tracksPath;
         TempFilesPath = tempFilesPath;
@@ -246,11 +250,12 @@ public static class AudioManager
         return recents;
     }
 
-    private static async Task<LavalinkGuildConnection> GetLavalinkConnection(DiscordGuild guild)
+    private static async Task<LavalinkPlayer> GetLavalinkConnection(DiscordGuild guild)
     {
-        var lava = Client.GetLavalink();
+        var result = await AudioService.Players.RetrieveAsync(guild.Id, null, PlayerFactory.Default, Options.Create(new LavalinkPlayerOptions()));
+        
+        var connection = result.Player;
 
-        var connection = lava.GetGuildConnection(guild);
         if (connection == null)
         {
             Log.Information("Play was called when bot was not in a voice channel");
@@ -262,8 +267,7 @@ public static class AudioManager
                 throw new ChannelNotFoundException($"Couldn't find the most crowded channel in {guild}");
             }
 
-            await JoinAsync(channelToJoin);
-            connection = lava.GetGuildConnection(guild);
+            connection = await JoinAsync(channelToJoin);
             if (connection == null)
             {
                 Log.Error("Bot couldn't join the most crowded channel, but no exception was thrown");
@@ -310,15 +314,8 @@ public static class AudioManager
 
     #region Join
 
-    public static async Task JoinAsync(DiscordChannel channel)
+    public static async Task<LavalinkPlayer> JoinAsync(DiscordChannel channel)
     {
-        var lava = Client.GetLavalink();
-        if (!lava.ConnectedNodes.Any())
-        {
-            Log.Warning(Constants.JoinAsyncLavalinkNotConnectedLog);
-            throw new LavalinkNotConnectedException(Constants.JoinAsyncLavalinkNotConnectedLog);
-        }
-
         if (channel.Type != ChannelType.Voice)
         {
             // Handle cases where one text and one voice channel may exist with the same name.
@@ -334,9 +331,15 @@ public static class AudioManager
             channel = alternateChannel;
         }
 
-        var node = lava.GetIdealNodeConnection();
-        await node.ConnectAsync(channel);
+        var result = await AudioService.Players.RetrieveAsync(channel.Guild.Id, channel.Id, PlayerFactory.Default, Options.Create(new LavalinkPlayerOptions()), new PlayerRetrieveOptions { ChannelBehavior = PlayerChannelBehavior.Join });
+        var connection = result.Player;
+        if (connection == null)
+        {
+            Log.Warning("JoinAsync() failed to establish a Lavalink connection to {Channel}", channel);
+            throw new Exception("JoinAsync() failed to establish a Lavalink connection.");
+        }
         Log.Information("Voice connected to {Channel}", channel);
+        return connection;
     }
 
     public static async Task JoinChannelIdAsync(ulong channelId)
@@ -376,22 +379,15 @@ public static class AudioManager
 
     public static async Task LeaveAsync(DiscordGuild guild)
     {
-        var lava = Client.GetLavalink();
-        if (!lava.ConnectedNodes.Any())
-        {
-            Log.Warning(Constants.LeaveAsyncLavalinkNotConnectedLog);
-            throw new Exception(Constants.LeaveAsyncLavalinkNotConnectedMessage);
-        }
-
-        var connection = lava.GetGuildConnection(guild);
+        var connection = await GetLavalinkConnection(guild);
         if (connection == null)
         {
             Log.Warning(Constants.NotConnectedToVoiceLog);
             throw new Exception(Constants.NotConnectedToVoiceMessage);
         }
-
+        var currentChannel = guild.Channels[connection.VoiceChannelId];
         await connection.DisconnectAsync();
-        Log.Information("Voice disconnected from {Channel}", connection.Channel);
+        Log.Information("Voice disconnected from {Channel}", currentChannel);
     }
 
     public static async Task LeaveAsync(ulong guildId)
@@ -421,14 +417,6 @@ public static class AudioManager
             throw new FileNotFoundException($"File does not exist: {audioFile.FullName}");
         }
 
-        var result = await connection.GetTracksAsync(audioFile);
-        if (result.LoadResultType != LavalinkLoadResultType.TrackLoaded)
-        {
-            Log.Warning("Lavalink failed to load the track {@Track} with failure type: {Type}", audioTrack,
-                result.LoadResultType);
-            throw new LavalinkLoadFailedException(result.LoadResultType.ToString());
-        }
-
         if (!LastPlayedTracks.TryGetValue(guild.Id, out Queue<AudioTrack>? value))
         {
             value = new Queue<AudioTrack>(10);
@@ -442,7 +430,7 @@ public static class AudioManager
 
         value.Enqueue(audioTrack);
 
-        await connection.PlayAsync(result.Tracks.FirstOrDefault());
+        await connection.PlayFileAsync(new FileInfo(audioTrack.Path));
         // TODO If PlayAsync does not return immediately and waits for playback to end (not likely), user could end up with a negative balance.
         var audioPrice = audioTrack.CalculateAndSetPrice();
         UserManager.DeductPoints(member, audioPrice);
@@ -469,22 +457,15 @@ public static class AudioManager
 
         var connection = await GetLavalinkConnection(guild);
 
-        var result = await connection.GetTracksAsync(audioUrl);
+        var result = await AudioService.Tracks.LoadTrackAsync(audioUrl.ToString(), TrackSearchMode.YouTube);
 
-        if (result.LoadResultType != LavalinkLoadResultType.TrackLoaded)
+        if (result == null)
         {
-            Log.Warning("Lavalink failed to load the track from URL {Url} with failure type: {Type}", audioUrl,
-                result.LoadResultType);
-            if (result.Exception.Message == null)
-            {
-                throw new LavalinkLoadFailedException(result.LoadResultType.ToString());
-            }
-
-            Log.Warning("Exception: {ExceptionMessage}", result.Exception.Message);
-            throw new LavalinkLoadFailedException(result.Exception.Message);
+            Log.Warning("Lavalink failed to load the track from URL {Url}", audioUrl);
+            throw new LavalinkLoadFailedException(audioUrl.ToString());
         }
 
-        await connection.PlayAsync(result.Tracks.FirstOrDefault());
+        await connection.PlayAsync(result);
     }
 
     public static async Task<int> PlayAsync(string audioName, DiscordGuild guild, DiscordMember member, CommandContext? ctx = null,

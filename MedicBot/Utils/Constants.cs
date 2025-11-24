@@ -13,9 +13,9 @@ public static class Constants
 
     public const ulong OwnerId = 134336937224830977;
     public static readonly HashSet<ulong> WhitelistedGuilds = new() { 463052720509812736 };
-    public const string LavalinkPassword = "5aJCTF!Z2&*853#79r7!xind*u^2LWy";
-    private const string LavalinkHost = "127.0.0.1";
-    private const int LavalinkPort = 3332;
+    public const string LavalinkPassword = "5aJCTF!Z2&*853#79r7!xind*u2LWy";
+    public const string LavalinkHttp = "http://127.0.0.1:3332";
+    public const string LavalinkWebSocket = "ws://127.0.0.1:3332/v4/websocket";
     public const string BotTokenEnvironmentVariableName = "MedicBot_Token_Dev";
     public const string OAuthClientIdEnvironmentVariableName = "MedicBot_OAuth_ClientID";
     public const string OAuthClientSecretEnvironmentVariableName = "MedicBot_OAuth_ClientSecret";
@@ -70,8 +70,6 @@ public static class Constants
         (char) 21, (char) 22, (char) 23, (char) 24, (char) 25, (char) 26, (char) 27, (char) 28, (char) 29, (char) 30,
         (char) 31, ':', '*', '?', '\\', '/'
     };
-
-    public static readonly ConnectionEndpoint LavalinkEndpoint = new(LavalinkHost, LavalinkPort);
 
     public static readonly string[] BotPrefixes = {"*", "$"};
 }

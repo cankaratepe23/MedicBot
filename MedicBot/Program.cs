@@ -5,7 +5,7 @@ using DSharpPlus.CommandsNext;
 using DSharpPlus.Interactivity;
 using DSharpPlus.Interactivity.Enums;
 using DSharpPlus.Interactivity.Extensions;
-using DSharpPlus.Lavalink;
+using Lavalink4NET.Extensions;
 using MedicBot.Commands;
 using MedicBot.EventHandler;
 using MedicBot.Hub;
@@ -188,6 +188,34 @@ internal static class Program
 
         MongoDbManager.Database = mongoDb;
 
+        #region Discord Client Config
+
+        var logFactory = new LoggerFactory().AddSerilog();
+
+        var discord = new DiscordClient(new DiscordConfiguration
+        {
+            Token = Environment.GetEnvironmentVariable(Constants.BotTokenEnvironmentVariableName),
+            LoggerFactory = logFactory,
+            Intents = DiscordIntents.All
+        });
+        _client = discord;
+
+        #endregion
+        
+        #region Lavalink Config
+
+        builder.Services.AddSingleton(_client);
+        builder.Services.AddLavalink();
+        builder.Services.ConfigureLavalink(config =>
+        {
+            config.Passphrase = Constants.LavalinkPassword;
+            config.BaseAddress = new Uri(Constants.LavalinkHttp);
+            config.WebSocketUri = new Uri(Constants.LavalinkWebSocket);
+
+        });
+
+        #endregion
+
         var app = builder.Build();
 
         // Configure the HTTP request pipeline.
@@ -243,33 +271,6 @@ internal static class Program
 
         Log.Logger = loggerConfiguration.CreateLogger();
 
-        var logFactory = new LoggerFactory().AddSerilog();
-
-        #endregion
-
-        #region Lavalink Config
-
-        var lavalinkConfiguration = new LavalinkConfiguration
-        {
-            // Lavalink only listens on 127.0.0.1, plaintext password in git is not a security concern.
-            Password = Constants.LavalinkPassword,
-            RestEndpoint = Constants.LavalinkEndpoint,
-            SocketEndpoint = Constants.LavalinkEndpoint
-        };
-
-        #endregion
-
-        #region Discord Client Config
-
-        var discord = new DiscordClient(new DiscordConfiguration
-        {
-            Token = Environment.GetEnvironmentVariable(Constants.BotTokenEnvironmentVariableName),
-            LoggerFactory = logFactory,
-            Intents = DiscordIntents.All
-        });
-        _client = discord;
-        var lavalink = discord.UseLavalink();
-
         #endregion
 
         #region Initializations
@@ -301,9 +302,15 @@ internal static class Program
         var hubContext = app.Services.GetService<IHubContext<PlaybackHub, IPlaybackClient>>();
         if (hubContext == null)
         {
+            // TODO: GetRequiredService throws an exception if service not found, use that instead?
             throw new InvalidOperationException("Could not instantiate the SignalR Hub context");   
         }
-        AudioManager.Init(discord, hubContext, audioTracksPath, tempFilesPath);
+        using (var scope = app.Services.CreateScope())
+        {
+            var audioService = scope.ServiceProvider.GetRequiredService<Lavalink4NET.IAudioService>();
+            await audioService.StartAsync();
+            AudioManager.Init(discord, audioService, hubContext, audioTracksPath, tempFilesPath);
+        }
         ImageManager.Init(discord, imagesPath, tempFilesPath);
         VoiceStateHandler.Init(discord);
 
@@ -349,7 +356,6 @@ internal static class Program
         // Startup
         await app.StartAsync();
         await discord.ConnectAsync();
-        await lavalink.ConnectAsync(lavalinkConfiguration);
         try
         {
             await Task.Delay(-1, CancellationTokenSource.Token);
@@ -367,7 +373,6 @@ internal static class Program
         }
 
         VoiceStateHandler.ReloadTracking();
-        await _client.GetLavalink().GetNodeConnection(Constants.LavalinkEndpoint).StopAsync();
         await _client.DisconnectAsync();
         _client.Dispose();
         _client = null;
