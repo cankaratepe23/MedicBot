@@ -64,7 +64,7 @@ public class AudioController : ControllerBase
 
     // TODO This should be POST, why is it GET?
     [HttpGet("Play/{guildId}")] // TODO Play/audioId & guild ID from query instead
-    [Authorize]
+    [Authorize(Policy = "CombinedPolicy")]
     public async Task<IActionResult> Play(ulong guildId, [FromQuery] string audioNameOrId,
         [FromQuery] bool searchById = false)
     {
@@ -84,7 +84,7 @@ public class AudioController : ControllerBase
     }
 
     [HttpGet("Recents")]
-    [Authorize]
+    [Authorize(Policy = "CombinedPolicy")]
     public IActionResult Recents()
     {
         try
@@ -108,7 +108,7 @@ public class AudioController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize]
+    [Authorize(Policy = "CombinedPolicy")]
     public async Task<IActionResult> Get([FromQuery] bool? enriched)
     {
         var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();

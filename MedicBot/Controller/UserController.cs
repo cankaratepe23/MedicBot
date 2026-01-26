@@ -13,7 +13,7 @@ namespace MedicBot.Controller;
 public class UserController : ControllerBase
 {
     [HttpGet("@me/Favorites")]
-    [Authorize]
+    [Authorize(Policy = "CombinedPolicy")]
     public IActionResult GetFavorites()
     {
         var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
@@ -23,7 +23,7 @@ public class UserController : ControllerBase
     }
 
     [HttpPost("@me/Favorites/{trackId}")]
-    [Authorize]
+    [Authorize(Policy = "CombinedPolicy")]
     public IActionResult AddFavorite(string trackId)
     {
         var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
@@ -39,7 +39,7 @@ public class UserController : ControllerBase
     }
 
     [HttpDelete("@me/Favorites/{trackId}")]
-    [Authorize]
+    [Authorize(Policy = "CombinedPolicy")]
     public IActionResult DeleteFavorite(string trackId)
     {
         var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
@@ -56,7 +56,7 @@ public class UserController : ControllerBase
     }
 
     [HttpGet("@me/Balance")]
-    [Authorize]
+    [Authorize(Policy = "CombinedPolicy")]
     public async Task<IActionResult> GetBalance()
     {
         var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
