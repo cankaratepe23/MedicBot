@@ -3,7 +3,9 @@ using System.Net.Http.Headers;
 using System.Security.Authentication;
 using System.Security.Claims;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using MedicBot;
+using Serilog;
 using MedicBot.Manager;
 using MedicBot.Model;
 using MedicBot.Repository;
@@ -233,20 +235,28 @@ public class AuthController : ControllerBase
         };
 
         var response = await Program.Client.SendAsync(request);
+        var payload = await response.Content.ReadAsStringAsync();
+        
         if (!response.IsSuccessStatusCode)
         {
+            Log.Warning("Discord token exchange failed with status {StatusCode}: {ResponseBody}", 
+                response.StatusCode, payload);
             return null;
         }
 
-        var payload = await response.Content.ReadAsStringAsync();
         var tokenResponse = JsonSerializer.Deserialize<DiscordTokenResponse>(payload, JsonSerializerOptions);
+        
+        if (tokenResponse?.AccessToken == null)
+        {
+            Log.Warning("Discord token exchange returned success but AccessToken was null. Response: {ResponseBody}", payload);
+        }
+        
         return tokenResponse?.AccessToken;
     }
 
-    // ReSharper disable once ClassNeverInstantiated.Local
     private sealed class DiscordTokenResponse
     {
-        // ReSharper disable once UnusedAutoPropertyAccessor.Local
+        [JsonPropertyName("access_token")]
         public string? AccessToken { get; set; }
     }
 }
