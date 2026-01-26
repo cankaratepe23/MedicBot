@@ -40,6 +40,65 @@ public class AuthController : ControllerBase
         return Ok();
     }
 
+    [HttpPost("ExchangeDiscordCode")]
+    public async Task<IActionResult> ExchangeDiscordCode([FromBody] DiscordCodeExchangeRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request?.Code) ||
+            string.IsNullOrWhiteSpace(request?.CodeVerifier) ||
+            string.IsNullOrWhiteSpace(request?.RedirectUri))
+        {
+            return BadRequest("Code, code verifier, and redirect URI are required.");
+        }
+
+        var clientId = Environment.GetEnvironmentVariable("MedicBot_OAuth_ClientID");
+        var clientSecret = Environment.GetEnvironmentVariable("MedicBot_OAuth_ClientSecret");
+        if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+        {
+            return StatusCode(500, "OAuth configuration is missing.");
+        }
+
+        // Exchange authorization code for Discord access token
+        var discordAccessToken = await ExchangeCodeForDiscordTokenAsync(
+            request.Code, request.CodeVerifier, request.RedirectUri, clientId, clientSecret);
+
+        if (discordAccessToken == null)
+        {
+            return Unauthorized("Discord token exchange failed.");
+        }
+
+        // Validate the Discord token and get user info
+        var discordUser = await GetDiscordUserAsync(discordAccessToken);
+        if (discordUser?.Id == null || !ulong.TryParse(discordUser.Id, out var userId))
+        {
+            return Unauthorized("Failed to validate Discord user.");
+        }
+
+        // Issue MedicBot tokens
+        var now = DateTime.UtcNow;
+        var accessToken = TokenManager.GenerateTemporaryToken(discordUser.Id, TokenManager.AccessTokenLifetime);
+        var refreshToken = TokenManager.GenerateRefreshToken();
+        var refreshTokenHash = TokenManager.HashToken(refreshToken);
+
+        var storedToken = new RefreshToken
+        {
+            TokenHash = refreshTokenHash,
+            UserId = userId,
+            IssuedAt = now,
+            ExpiresAt = now.Add(TokenManager.RefreshTokenLifetime),
+            UserAgent = Request.Headers.UserAgent.ToString(),
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+        };
+        RefreshTokenRepository.Add(storedToken);
+
+        return Ok(new AuthTokensResponse
+        {
+            AccessToken = accessToken,
+            AccessTokenExpiresIn = (int)TokenManager.AccessTokenLifetime.TotalSeconds,
+            RefreshToken = refreshToken,
+            RefreshTokenExpiresIn = (int)TokenManager.RefreshTokenLifetime.TotalSeconds
+        });
+    }
+
     [HttpPost("ExchangeDiscordToken")]
     public async Task<IActionResult> ExchangeDiscordToken([FromBody] DiscordTokenExchangeRequest request)
     {
@@ -153,5 +212,41 @@ public class AuthController : ControllerBase
 
         var payload = await response.Content.ReadAsStringAsync();
         return JsonSerializer.Deserialize<DiscordUserInfo>(payload, JsonSerializerOptions);
+    }
+
+    private static async Task<string?> ExchangeCodeForDiscordTokenAsync(
+        string code, string codeVerifier, string redirectUri, string clientId, string clientSecret)
+    {
+        var parameters = new Dictionary<string, string>
+        {
+            ["client_id"] = clientId,
+            ["client_secret"] = clientSecret,
+            ["grant_type"] = "authorization_code",
+            ["code"] = code,
+            ["redirect_uri"] = redirectUri,
+            ["code_verifier"] = codeVerifier
+        };
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "https://discord.com/api/oauth2/token")
+        {
+            Content = new FormUrlEncodedContent(parameters)
+        };
+
+        var response = await Program.Client.SendAsync(request);
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        var payload = await response.Content.ReadAsStringAsync();
+        var tokenResponse = JsonSerializer.Deserialize<DiscordTokenResponse>(payload, JsonSerializerOptions);
+        return tokenResponse?.AccessToken;
+    }
+
+    // ReSharper disable once ClassNeverInstantiated.Local
+    private sealed class DiscordTokenResponse
+    {
+        // ReSharper disable once UnusedAutoPropertyAccessor.Local
+        public string? AccessToken { get; set; }
     }
 }
