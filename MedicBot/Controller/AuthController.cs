@@ -47,21 +47,15 @@ public class AuthController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request?.Code) ||
             string.IsNullOrWhiteSpace(request?.CodeVerifier) ||
-            string.IsNullOrWhiteSpace(request?.RedirectUri))
+            string.IsNullOrWhiteSpace(request?.RedirectUri) ||
+            string.IsNullOrWhiteSpace(request?.ClientId))
         {
-            return BadRequest("Code, code verifier, and redirect URI are required.");
+            return BadRequest("Code, code verifier, redirect URI, and client ID are required.");
         }
 
-        var clientId = Environment.GetEnvironmentVariable("MedicBot_OAuth_ClientID");
-        var clientSecret = Environment.GetEnvironmentVariable("MedicBot_OAuth_ClientSecret");
-        if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
-        {
-            return StatusCode(500, "OAuth configuration is missing.");
-        }
-
-        // Exchange authorization code for Discord access token
+        // Exchange authorization code for Discord access token (PKCE flow - no client_secret needed)
         var discordAccessToken = await ExchangeCodeForDiscordTokenAsync(
-            request.Code, request.CodeVerifier, request.RedirectUri, clientId, clientSecret);
+            request.Code, request.CodeVerifier, request.RedirectUri, request.ClientId);
 
         if (discordAccessToken == null)
         {
@@ -217,12 +211,14 @@ public class AuthController : ControllerBase
     }
 
     private static async Task<string?> ExchangeCodeForDiscordTokenAsync(
-        string code, string codeVerifier, string redirectUri, string clientId, string clientSecret)
+        string code, string codeVerifier, string redirectUri, string clientId)
     {
+        Log.Debug("Exchanging Discord code (PKCE). ClientId={ClientId}, RedirectUri={RedirectUri}, CodeLength={CodeLength}, CodeVerifierLength={CodeVerifierLength}",
+            clientId, redirectUri, code?.Length ?? 0, codeVerifier?.Length ?? 0);
+        
         var parameters = new Dictionary<string, string>
         {
             ["client_id"] = clientId,
-            ["client_secret"] = clientSecret,
             ["grant_type"] = "authorization_code",
             ["code"] = code,
             ["redirect_uri"] = redirectUri,
@@ -239,8 +235,8 @@ public class AuthController : ControllerBase
         
         if (!response.IsSuccessStatusCode)
         {
-            Log.Warning("Discord token exchange failed with status {StatusCode}: {ResponseBody}", 
-                response.StatusCode, payload);
+            Log.Warning("Discord token exchange failed. Status={StatusCode}, Response={ResponseBody}, ClientId={ClientId}, RedirectUri={RedirectUri}", 
+                response.StatusCode, payload, clientId, redirectUri);
             return null;
         }
 
