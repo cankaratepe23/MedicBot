@@ -107,6 +107,35 @@ public class AudioController : ControllerBase
         }
     }
 
+    [HttpGet("Search")]
+    [Authorize(Policy = "CombinedPolicy")]
+    public async Task<IActionResult> Search([FromQuery] string q, [FromQuery] int limit = 10, [FromQuery] bool enriched = false)
+    {
+        var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
+        var userId = Convert.ToUInt64(userClaim.Value);
+        
+        // Clamp limit to maximum of 30
+        limit = Math.Clamp(limit, 1, 30);
+        
+        try
+        {
+            var results = await AudioManager.FindAsync(q, limit, null, userId);
+            
+            if (enriched)
+            {
+                var userFavoriteTracks = UserManager.GetFavoriteTrackIds(userId);
+                var enrichedResults = results.Select(t => t.ToDto().Enrich(userFavoriteTracks.Contains(t.Id)));
+                return Ok(enrichedResults);
+            }
+            
+            return Ok(results.Select(t => t.ToDto()));
+        }
+        catch (Exception e)
+        {
+            return BadRequest(e.Message);
+        }
+    }
+
     [HttpGet]
     [Authorize(Policy = "CombinedPolicy")]
     public async Task<IActionResult> Get([FromQuery] bool? enriched)
