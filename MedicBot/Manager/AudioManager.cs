@@ -83,7 +83,7 @@ public static class AudioManager
             var filesDirectory = string.Join('/', TempFilesPath, audioName);
             Directory.CreateDirectory(filesDirectory);
 
-            using (var archive = SevenZipArchive.Open(filePath))
+            using (var archive = SevenZipArchive.OpenArchive(filePath))
             using (var reader = archive.ExtractAllEntries())
             {
                 reader.WriteAllToDirectory(filesDirectory);
