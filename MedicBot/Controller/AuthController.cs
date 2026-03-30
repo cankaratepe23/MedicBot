@@ -184,14 +184,16 @@ public class AuthController : ControllerBase
         });
     }
 
-    [Authorize]
+    [Authorize(Policy = "CombinedPolicy")]
     [HttpGet("TemporaryToken")]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
     public IActionResult GenerateTemporaryToken()
     {
         var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
         var userId = userClaim.Value;
 
         var token = TokenManager.GenerateTemporaryToken(userId);
+        Response.Headers.CacheControl = "no-store";
         return Ok(token);
     }
 
