@@ -1,13 +1,21 @@
 ﻿using HtmlAgilityPack;
 
-namespace MedicBot;
+namespace MedicBot.Manager;
 
-public class MiscManager
+public class MiscManager : IMiscManager
 {
-    public static async Task<string> GetSelcukSportsUrlAsync()
+    private readonly IHttpClientFactory _httpClientFactory;
+
+    public MiscManager(IHttpClientFactory httpClientFactory)
+    {
+        _httpClientFactory = httpClientFactory;
+    }
+
+    public async Task<string> GetSelcukSportsUrlAsync()
     {
         var selcukUrl = "https://selcuksportshd78.biz";
-        await using var stream = await Program.Client.GetStreamAsync(selcukUrl);
+        var client = _httpClientFactory.CreateClient();
+        await using var stream = await client.GetStreamAsync(selcukUrl);
         using var streamReader = new StreamReader(stream);
         var responseString = await streamReader.ReadToEndAsync();
         var doc = new HtmlDocument();

@@ -1,17 +1,15 @@
-﻿using System.Net.Http;
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Security.Authentication;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using MedicBot;
-using Serilog;
 using MedicBot.Manager;
 using MedicBot.Model;
 using MedicBot.Repository;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Serilog;
 
 namespace MedicBot.Controller;
 
@@ -23,6 +21,17 @@ public class AuthController : ControllerBase
     {
         PropertyNameCaseInsensitive = true
     };
+
+    private readonly ITokenManager _tokenManager;
+    private readonly IRefreshTokenRepository _refreshTokenRepository;
+    private readonly IHttpClientFactory _httpClientFactory;
+
+    public AuthController(ITokenManager tokenManager, IRefreshTokenRepository refreshTokenRepository, IHttpClientFactory httpClientFactory)
+    {
+        _tokenManager = tokenManager;
+        _refreshTokenRepository = refreshTokenRepository;
+        _httpClientFactory = httpClientFactory;
+    }
 
     [HttpGet("Login")]
     public IActionResult Login()
@@ -53,7 +62,6 @@ public class AuthController : ControllerBase
             return BadRequest("Code, code verifier, redirect URI, and client ID are required.");
         }
 
-        // Exchange authorization code for Discord access token (PKCE flow - no client_secret needed)
         var discordAccessToken = await ExchangeCodeForDiscordTokenAsync(
             request.Code, request.CodeVerifier, request.RedirectUri, request.ClientId);
 
@@ -62,36 +70,34 @@ public class AuthController : ControllerBase
             return Unauthorized("Discord token exchange failed.");
         }
 
-        // Validate the Discord token and get user info
         var discordUser = await GetDiscordUserAsync(discordAccessToken);
         if (discordUser?.Id == null || !ulong.TryParse(discordUser.Id, out var userId))
         {
             return Unauthorized("Failed to validate Discord user.");
         }
 
-        // Issue MedicBot tokens
         var now = DateTime.UtcNow;
-        var accessToken = TokenManager.GenerateTemporaryToken(discordUser.Id, TokenManager.AccessTokenLifetime);
-        var refreshToken = TokenManager.GenerateRefreshToken();
-        var refreshTokenHash = TokenManager.HashToken(refreshToken);
+        var accessToken = _tokenManager.GenerateTemporaryToken(discordUser.Id, _tokenManager.AccessTokenLifetime);
+        var refreshToken = _tokenManager.GenerateRefreshToken();
+        var refreshTokenHash = _tokenManager.HashToken(refreshToken);
 
         var storedToken = new RefreshToken
         {
             TokenHash = refreshTokenHash,
             UserId = userId,
             IssuedAt = now,
-            ExpiresAt = now.Add(TokenManager.RefreshTokenLifetime),
+            ExpiresAt = now.Add(_tokenManager.RefreshTokenLifetime),
             UserAgent = Request.Headers.UserAgent.ToString(),
             IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
         };
-        RefreshTokenRepository.Add(storedToken);
+        _refreshTokenRepository.Add(storedToken);
 
         return Ok(new AuthTokensResponse
         {
             AccessToken = accessToken,
-            AccessTokenExpiresIn = (int)TokenManager.AccessTokenLifetime.TotalSeconds,
+            AccessTokenExpiresIn = (int)_tokenManager.AccessTokenLifetime.TotalSeconds,
             RefreshToken = refreshToken,
-            RefreshTokenExpiresIn = (int)TokenManager.RefreshTokenLifetime.TotalSeconds
+            RefreshTokenExpiresIn = (int)_tokenManager.RefreshTokenLifetime.TotalSeconds
         });
     }
 
@@ -110,27 +116,27 @@ public class AuthController : ControllerBase
         }
 
         var now = DateTime.UtcNow;
-        var accessToken = TokenManager.GenerateTemporaryToken(discordUser.Id, TokenManager.AccessTokenLifetime);
-        var refreshToken = TokenManager.GenerateRefreshToken();
-        var refreshTokenHash = TokenManager.HashToken(refreshToken);
+        var accessToken = _tokenManager.GenerateTemporaryToken(discordUser.Id, _tokenManager.AccessTokenLifetime);
+        var refreshToken = _tokenManager.GenerateRefreshToken();
+        var refreshTokenHash = _tokenManager.HashToken(refreshToken);
 
         var storedToken = new RefreshToken
         {
             TokenHash = refreshTokenHash,
             UserId = userId,
             IssuedAt = now,
-            ExpiresAt = now.Add(TokenManager.RefreshTokenLifetime),
+            ExpiresAt = now.Add(_tokenManager.RefreshTokenLifetime),
             UserAgent = Request.Headers.UserAgent.ToString(),
             IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
         };
-        RefreshTokenRepository.Add(storedToken);
+        _refreshTokenRepository.Add(storedToken);
 
         return Ok(new AuthTokensResponse
         {
             AccessToken = accessToken,
-            AccessTokenExpiresIn = (int)TokenManager.AccessTokenLifetime.TotalSeconds,
+            AccessTokenExpiresIn = (int)_tokenManager.AccessTokenLifetime.TotalSeconds,
             RefreshToken = refreshToken,
-            RefreshTokenExpiresIn = (int)TokenManager.RefreshTokenLifetime.TotalSeconds
+            RefreshTokenExpiresIn = (int)_tokenManager.RefreshTokenLifetime.TotalSeconds
         });
     }
 
@@ -142,8 +148,8 @@ public class AuthController : ControllerBase
             return BadRequest("Refresh token is required.");
         }
 
-        var tokenHash = TokenManager.HashToken(request.RefreshToken);
-        var storedToken = RefreshTokenRepository.FindByHash(tokenHash);
+        var tokenHash = _tokenManager.HashToken(request.RefreshToken);
+        var storedToken = _refreshTokenRepository.FindByHash(tokenHash);
         if (storedToken == null)
         {
             return Unauthorized();
@@ -155,32 +161,32 @@ public class AuthController : ControllerBase
         }
 
         var now = DateTime.UtcNow;
-        var newRefreshToken = TokenManager.GenerateRefreshToken();
-        var newRefreshTokenHash = TokenManager.HashToken(newRefreshToken);
+        var newRefreshToken = _tokenManager.GenerateRefreshToken();
+        var newRefreshTokenHash = _tokenManager.HashToken(newRefreshToken);
 
         storedToken.RevokedAt = now;
         storedToken.ReplacedByTokenHash = newRefreshTokenHash;
-        RefreshTokenRepository.Update(storedToken);
+        _refreshTokenRepository.Update(storedToken);
 
         var rotatedToken = new RefreshToken
         {
             TokenHash = newRefreshTokenHash,
             UserId = storedToken.UserId,
             IssuedAt = now,
-            ExpiresAt = now.Add(TokenManager.RefreshTokenLifetime),
+            ExpiresAt = now.Add(_tokenManager.RefreshTokenLifetime),
             UserAgent = Request.Headers.UserAgent.ToString(),
             IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
         };
-        RefreshTokenRepository.Add(rotatedToken);
+        _refreshTokenRepository.Add(rotatedToken);
 
-        var accessToken = TokenManager.GenerateTemporaryToken(storedToken.UserId.ToString(), TokenManager.AccessTokenLifetime);
+        var accessToken = _tokenManager.GenerateTemporaryToken(storedToken.UserId.ToString(), _tokenManager.AccessTokenLifetime);
 
         return Ok(new AuthTokensResponse
         {
             AccessToken = accessToken,
-            AccessTokenExpiresIn = (int)TokenManager.AccessTokenLifetime.TotalSeconds,
+            AccessTokenExpiresIn = (int)_tokenManager.AccessTokenLifetime.TotalSeconds,
             RefreshToken = newRefreshToken,
-            RefreshTokenExpiresIn = (int)TokenManager.RefreshTokenLifetime.TotalSeconds
+            RefreshTokenExpiresIn = (int)_tokenManager.RefreshTokenLifetime.TotalSeconds
         });
     }
 
@@ -192,17 +198,18 @@ public class AuthController : ControllerBase
         var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
         var userId = userClaim.Value;
 
-        var token = TokenManager.GenerateTemporaryToken(userId);
+        var token = _tokenManager.GenerateTemporaryToken(userId);
         Response.Headers.CacheControl = "no-store";
         return Ok(token);
     }
 
-    private static async Task<DiscordUserInfo?> GetDiscordUserAsync(string accessToken)
+    private async Task<DiscordUserInfo?> GetDiscordUserAsync(string accessToken)
     {
+        var client = _httpClientFactory.CreateClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "https://discord.com/api/users/@me");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
-        var response = await Program.Client.SendAsync(request);
+        var response = await client.SendAsync(request);
         if (!response.IsSuccessStatusCode)
         {
             return null;
@@ -212,7 +219,7 @@ public class AuthController : ControllerBase
         return JsonSerializer.Deserialize<DiscordUserInfo>(payload, JsonSerializerOptions);
     }
 
-    private static async Task<string?> ExchangeCodeForDiscordTokenAsync(
+    private async Task<string?> ExchangeCodeForDiscordTokenAsync(
         string code, string codeVerifier, string redirectUri, string clientId)
     {
         Log.Debug("Exchanging Discord code (PKCE). ClientId={ClientId}, RedirectUri={RedirectUri}, CodeLength={CodeLength}, CodeVerifierLength={CodeVerifierLength}",
@@ -227,12 +234,13 @@ public class AuthController : ControllerBase
             ["code_verifier"] = codeVerifier
         };
 
+        var client = _httpClientFactory.CreateClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "https://discord.com/api/oauth2/token")
         {
             Content = new FormUrlEncodedContent(parameters)
         };
 
-        var response = await Program.Client.SendAsync(request);
+        var response = await client.SendAsync(request);
         var payload = await response.Content.ReadAsStringAsync();
         
         if (!response.IsSuccessStatusCode)

@@ -1,44 +1,39 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Concurrent;
 using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
-using DSharpPlus.Interactivity.Extensions;
-using MedicBot.Manager;
 using MedicBot.Repository;
 using MedicBot.Utils;
 using Serilog;
 
 namespace MedicBot.EventHandler;
 
-public static class VoiceStateHandler
+public class VoiceStateHandler : IVoiceStateHandler
 {
-    private static readonly Dictionary<ulong, Dictionary<ulong, UserVoiceStateInfo>> VoiceStateTrackers = new();
-    private static bool _isTracking;
+    private readonly ConcurrentDictionary<ulong, ConcurrentDictionary<ulong, UserVoiceStateInfo>> _voiceStateTrackers = new();
+    private readonly DiscordClient _client;
+    private readonly ISettingsRepository _settingsRepository;
+    private readonly IUserPointsRepository _userPointsRepository;
+    private bool _isTracking;
+    private int _minNumberOfUsersNeededToEarnPoints;
 
-    static VoiceStateHandler()
+    public VoiceStateHandler(DiscordClient client, ISettingsRepository settingsRepository, IUserPointsRepository userPointsRepository)
     {
+        _client = client;
+        _settingsRepository = settingsRepository;
+        _userPointsRepository = userPointsRepository;
         UpdateThreshold();
-        // TODO Check if this is necessary
-    }
-
-    private static DiscordClient Client { get; set; } = null!;
-    private static int MinNumberOfUsersNeededToEarnPoints { get; set; }
-
-    private static void UpdateThreshold()
-    {
-        MinNumberOfUsersNeededToEarnPoints =
-            SettingsRepository.GetValue<int>(Constants.MinNumberOfUsersNeededToEarnPoints);
-    }
-
-    public static void Init(DiscordClient client)
-    {
-        Client = client;
         _isTracking = true;
     }
 
-    public static Task DiscordOnVoiceStateUpdated(DiscordClient sender, VoiceStateUpdateEventArgs e)
+    private void UpdateThreshold()
     {
-        // TODO Check if a semaphore is needed
+        _minNumberOfUsersNeededToEarnPoints =
+            _settingsRepository.GetValue<int>(Constants.MinNumberOfUsersNeededToEarnPoints);
+    }
+
+    public Task DiscordOnVoiceStateUpdated(DiscordClient sender, VoiceStateUpdateEventArgs e)
+    {
         if (!e.User.IsBot)
         {
             UpdateThreshold();
@@ -60,14 +55,14 @@ public static class VoiceStateHandler
         return Task.CompletedTask;
     }
 
-    private static void TrackerUserJoin(DiscordUser eventUser, int nonBotUsersCount, DiscordChannel channel)
+    private void TrackerUserJoin(DiscordUser eventUser, int nonBotUsersCount, DiscordChannel channel)
     {
         Log.Debug("Join event of {User} to {Channel}", eventUser, channel);
-        if (nonBotUsersCount < MinNumberOfUsersNeededToEarnPoints)
+        if (nonBotUsersCount < _minNumberOfUsersNeededToEarnPoints)
         {
             Log.Debug(
                 "{Channel} does not have enough users to earn points (Current minimum is: {Minimum}, channel has {Current} users",
-                channel, MinNumberOfUsersNeededToEarnPoints, nonBotUsersCount);
+                channel, _minNumberOfUsersNeededToEarnPoints, nonBotUsersCount);
         }
         else
         {
@@ -75,30 +70,26 @@ public static class VoiceStateHandler
         }
     }
 
-    private static void TrackAllInChannel(DiscordChannel channel)
+    private void TrackAllInChannel(DiscordChannel channel)
     {
         foreach (var member in channel.GetNonBotUsers())
         {
-            if (!VoiceStateTrackers.TryGetValue(channel.Id, out Dictionary<ulong, UserVoiceStateInfo>? value))
-            {
-                value = new Dictionary<ulong, UserVoiceStateInfo>();
-                VoiceStateTrackers.Add(channel.Id, value);
-            }
+            var usersDict = _voiceStateTrackers.GetOrAdd(channel.Id, _ => new ConcurrentDictionary<ulong, UserVoiceStateInfo>());
 
-            if (value.ContainsKey(member.Id))
+            if (usersDict.ContainsKey(member.Id))
             {
                 continue;
             }
 
-            value.Add(member.Id, new UserVoiceStateInfo(member) {StartTime = DateTime.UtcNow});
+            usersDict.TryAdd(member.Id, new UserVoiceStateInfo(member) {StartTime = DateTime.UtcNow});
             Log.Information("Now tracking user {User}", member);
         }
     }
 
-    private static void TrackerUserDisconnect(DiscordUser eventUser, int nonBotUsersCount, DiscordChannel channel)
+    private void TrackerUserDisconnect(DiscordUser eventUser, int nonBotUsersCount, DiscordChannel channel)
     {
         Log.Debug("Disconnect event of {User} from {Channel}", eventUser, channel);
-        if (nonBotUsersCount < MinNumberOfUsersNeededToEarnPoints)
+        if (nonBotUsersCount < _minNumberOfUsersNeededToEarnPoints)
         {
             TrackerRemoveChannel(channel.Id);
         }
@@ -108,19 +99,18 @@ public static class VoiceStateHandler
         }
     }
 
-    public static async Task TrackerUserAddPoints(ulong userId)
+    public async Task TrackerUserAddPointsAsync(ulong userId)
     {
-        var user = await Client.GetUserAsync(userId);
+        var user = await _client.GetUserAsync(userId);
         TrackerUserAddPoints(user);
     }
 
-    public static void TrackerUserAddPoints(DiscordUser user)
+    public void TrackerUserAddPoints(DiscordUser user)
     {
         UserVoiceStateInfo? voiceStateInfo = null;
-        Dictionary<ulong, UserVoiceStateInfo>? usersDict = null;
-        foreach (var channelIdUsersDictPair in VoiceStateTrackers)
+        ConcurrentDictionary<ulong, UserVoiceStateInfo>? usersDict = null;
+        foreach (var channelIdUsersDictPair in _voiceStateTrackers)
         {
-            var currentChannelId = channelIdUsersDictPair.Key;
             var currentUsersDict = channelIdUsersDictPair.Value;
             foreach (var userIdStateInfoPair in currentUsersDict)
             {
@@ -143,61 +133,59 @@ public static class VoiceStateHandler
         Log.Debug("Found tracked user info {UserVoiceStateInfo}", voiceStateInfo);
         voiceStateInfo.FinishTime = DateTime.UtcNow;
         var pointsToAdd = voiceStateInfo.GetTimeSpentInVoice();
-        UserManager.AddPoints(voiceStateInfo.User, pointsToAdd);
+        _userPointsRepository.AddPoints(user.Id, (int)Math.Floor(pointsToAdd.TotalSeconds));
         Log.Information("Added {Points} points to {User}", pointsToAdd, voiceStateInfo.User);
 
         usersDict[user.Id] = new UserVoiceStateInfo(user) { StartTime = DateTime.UtcNow };
     }
 
-    private static void TrackerRemoveUser(DiscordUser eventUser, ulong channelId)
+    private void TrackerRemoveUser(DiscordUser eventUser, ulong channelId)
     {
         Log.Debug("Removing user {User} from the tracker list", eventUser);
-        var voiceStateInfo = VoiceStateTrackers[channelId][eventUser.Id];
-        if (voiceStateInfo == null)
+        if (!_voiceStateTrackers.TryGetValue(channelId, out var usersDict) ||
+            !usersDict.TryRemove(eventUser.Id, out var voiceStateInfo))
         {
-            throw new InvalidOperationException(
-                $"User {eventUser} left a voice channel that had more than {Constants.MinNumberOfUsersNeededToEarnPoints} users connected, but was not found in the trackers list.");
+            return;
         }
 
         voiceStateInfo.FinishTime = DateTime.UtcNow;
         var pointsToAdd = voiceStateInfo.GetTimeSpentInVoice();
-        UserManager.AddPoints(voiceStateInfo.User, pointsToAdd);
+        _userPointsRepository.AddPoints(eventUser.Id, (int)Math.Floor(pointsToAdd.TotalSeconds));
         Log.Information("Added {Points} points to {User}", pointsToAdd, voiceStateInfo.User);
-        VoiceStateTrackers[channelId].Remove(eventUser.Id);
     }
 
-    private static void TrackerRemoveChannel(ulong channelId)
+    private void TrackerRemoveChannel(ulong channelId)
     {
         Log.Debug("Removing everyone in channel with ID: {ChannelId} from the tracker list", channelId);
-        if (!VoiceStateTrackers.TryGetValue(channelId, out Dictionary<ulong, UserVoiceStateInfo>? value))
+        if (!_voiceStateTrackers.TryGetValue(channelId, out var usersDict))
         {
             Log.Debug("Channel with ID: {ChannelId} was not being tracked", channelId);
             return;
         }
 
-        foreach (var (_, voiceStateInfo) in value)
+        foreach (var (_, voiceStateInfo) in usersDict)
         {
             voiceStateInfo.FinishTime = DateTime.UtcNow;
-            UserManager.AddPoints(voiceStateInfo.User, voiceStateInfo.GetTimeSpentInVoice());
+            _userPointsRepository.AddPoints(voiceStateInfo.User.Id, (int)Math.Floor(voiceStateInfo.GetTimeSpentInVoice().TotalSeconds));
         }
 
-        value.Clear();
+        usersDict.Clear();
     }
 
-    private static void TrackerUserChangeChannel(VoiceStateUpdateEventArgs e)
+    private void TrackerUserChangeChannel(VoiceStateUpdateEventArgs e)
     {
         TrackerUserDisconnect(e.User, e.Before.Channel.CountNonBotUsers(), e.Before.Channel);
         TrackerUserJoin(e.User, e.After.Channel.CountNonBotUsers(), e.After.Channel);
     }
 
-    public static void StartTracking()
+    public void StartTracking()
     {
         UpdateThreshold();
         Log.Information("Initialize tracking");
-        var allPopulatedVoiceChannels = Client.Guilds.Values.SelectMany(guild =>
+        var allPopulatedVoiceChannels = _client.Guilds.Values.SelectMany(guild =>
             guild.Channels.Values.Where(channel =>
                 channel.Type == ChannelType.Voice &&
-                channel.Users.Count(member => !member.IsBot) >= MinNumberOfUsersNeededToEarnPoints));
+                channel.Users.Count(member => !member.IsBot) >= _minNumberOfUsersNeededToEarnPoints));
         var channelCounter = 0;
         foreach (var channel in allPopulatedVoiceChannels)
         {
@@ -208,7 +196,7 @@ public static class VoiceStateHandler
         Log.Information("Started tracking {Count} populated channel(s)", channelCounter);
     }
 
-    public static void ReloadTracking()
+    public void ReloadTracking()
     {
         UpdateThreshold();
         if (!_isTracking)
@@ -216,7 +204,7 @@ public static class VoiceStateHandler
             return;
         }
 
-        foreach (var (channelId, _) in VoiceStateTrackers)
+        foreach (var (channelId, _) in _voiceStateTrackers)
         {
             TrackerRemoveChannel(channelId);
         }

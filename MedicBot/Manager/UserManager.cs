@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using System.Threading.Tasks;
 using DSharpPlus.Entities;
 using MedicBot.EventHandler;
 using MedicBot.Model;
@@ -10,63 +9,83 @@ using Serilog;
 
 namespace MedicBot.Manager;
 
-public static class UserManager
+public class UserManager : IUserManager
 {
-    public static void AddPoints(DiscordUser member, int points)
+    private readonly IUserPointsRepository _userPointsRepository;
+    private readonly IUserMuteRepository _userMuteRepository;
+    private readonly IUserFavoritesRepository _userFavoritesRepository;
+    private readonly ISettingsRepository _settingsRepository;
+    private readonly IVoiceStateHandler _voiceStateHandler;
+
+    public UserManager(
+        IUserPointsRepository userPointsRepository,
+        IUserMuteRepository userMuteRepository,
+        IUserFavoritesRepository userFavoritesRepository,
+        ISettingsRepository settingsRepository,
+        IVoiceStateHandler voiceStateHandler)
     {
-        UserPointsRepository.AddPoints(member.Id, points);
+        _userPointsRepository = userPointsRepository;
+        _userMuteRepository = userMuteRepository;
+        _userFavoritesRepository = userFavoritesRepository;
+        _settingsRepository = settingsRepository;
+        _voiceStateHandler = voiceStateHandler;
+    }
+
+    public void AddPoints(DiscordUser member, int points)
+    {
+        _userPointsRepository.AddPoints(member.Id, points);
         Log.Debug("Added {Points} points to {Member}", points, member);
     }
 
-    public static int GetPoints(DiscordUser user)
+    public int GetPoints(DiscordUser user)
     {
-        VoiceStateHandler.TrackerUserAddPoints(user);
-        return UserPointsRepository.GetPoints(user.Id);
+        _voiceStateHandler.TrackerUserAddPoints(user);
+        return _userPointsRepository.GetPoints(user.Id);
     }
 
-    public static async Task<int> GetPointsByIdAsync(ulong userId)
+    public async Task<int> GetPointsByIdAsync(ulong userId)
     {
-        await VoiceStateHandler.TrackerUserAddPoints(userId);
-        return UserPointsRepository.GetPoints(userId);
+        await _voiceStateHandler.TrackerUserAddPointsAsync(userId);
+        return _userPointsRepository.GetPoints(userId);
     }
 
-    public static void AddPoints(DiscordUser member, TimeSpan time)
+    public void AddPoints(DiscordUser member, TimeSpan time)
     {
         AddPoints(member, (int) Math.Floor(time.TotalSeconds));
     }
 
-    public static void DeductPoints(DiscordUser member, int points)
+    public void DeductPoints(DiscordUser member, int points)
     {
         if (IsSillyZonkaWonka(member))
         {
             return;
         }
 
-        UserPointsRepository.AddPoints(member.Id, (-1) * points);
+        _userPointsRepository.AddPoints(member.Id, (-1) * points);
         Log.Debug("Removed {Points} points from {Member}", points, member);
     }
 
-    public static void DeductPoints(DiscordUser member, TimeSpan time)
+    public void DeductPoints(DiscordUser member, TimeSpan time)
     {
         DeductPoints(member, (int) Math.Floor(time.TotalSeconds));
     }
 
-    public static void Mute(DiscordMember member, int minutes)
+    public void Mute(DiscordMember member, int minutes)
     {
-        var userMute = UserMuteRepository.Get(member.Id);
+        var userMute = _userMuteRepository.Get(member.Id);
         if (userMute == null)
         {
-            UserMuteRepository.Set(member.Id, DateTime.UtcNow.AddMinutes(minutes));
+            _userMuteRepository.SetAsync(member.Id, DateTime.UtcNow.AddMinutes(minutes));
         }
         else
         {
-            UserMuteRepository.Set(member.Id, userMute.EndDateTime.AddMinutes(minutes));
+            _userMuteRepository.SetAsync(member.Id, userMute.EndDateTime.AddMinutes(minutes));
         }
     }
 
-    public static bool IsMuted(DiscordUser member)
+    public bool IsMuted(DiscordUser member)
     {
-        var userMute = UserMuteRepository.Get(member.Id);
+        var userMute = _userMuteRepository.Get(member.Id);
         if (userMute == null)
         {
             return false;
@@ -78,13 +97,13 @@ public static class UserManager
             return true;
         }
 
-        UserMuteRepository.Delete(userMute.Id);
+        _userMuteRepository.Delete(userMute.Id);
         return false;
     }
 
-    private static bool IsSillyZonkaWonka(DiscordUser user)
+    private bool IsSillyZonkaWonka(DiscordUser user)
     {
-        var sillyZonkaWonkaValue = SettingsRepository.GetValue<string>(Constants.SillyZonkaWonka);
+        var sillyZonkaWonkaValue = _settingsRepository.GetValue<string>(Constants.SillyZonkaWonka);
         if (string.IsNullOrWhiteSpace(sillyZonkaWonkaValue))
         {
             return false;
@@ -94,10 +113,10 @@ public static class UserManager
         return isSillyZonkaWonka;
     }
 
-    public static bool CanPlayAudio(DiscordMember member, AudioTrack audioTrack, out string reason)
+    public bool CanPlayAudio(DiscordMember member, AudioTrack audioTrack, out string reason)
     {
         var userPoints = GetPoints(member);
-        var audioPrice = audioTrack.CalculateAndDecreasePrice();
+        var audioPrice = audioTrack.CalculateAndDecreasePrice(_settingsRepository);
         var trackPrice = audioPrice;
 
         var userHasEnoughPoints = userPoints >= trackPrice;
@@ -120,8 +139,8 @@ public static class UserManager
         }
         if (!userIsNotMuted)
         {
-            var muteEndDateTime = UserMuteRepository.GetEndDateTime(member.Id);
-            var muteRemaining = muteEndDateTime - DateTime.UtcNow;
+            var muteEndDateTime = _userMuteRepository.GetEndDateTime(member.Id);
+            var muteRemaining = muteEndDateTime.HasValue ? muteEndDateTime.Value - DateTime.UtcNow : TimeSpan.Zero;
             reasonBuilder.Append($"You are currently muted for the next {muteRemaining.ToPrettyString()}");
         }
 
@@ -129,31 +148,31 @@ public static class UserManager
         return userHasEnoughPoints && userIsNotMuted;
     }
 
-    public static HashSet<ObjectId> GetFavoriteTrackIds(ulong userId)
+    public HashSet<ObjectId> GetFavoriteTrackIds(ulong userId)
     {
-        var userFavorites = UserFavoritesRepository.GetUserFavorites(userId);
+        var userFavorites = _userFavoritesRepository.GetUserFavorites(userId);
         return new HashSet<ObjectId>(userFavorites.Select(f => f.TrackId));
     }
 
-    public static void AddTrackToFavorites(ulong userId, AudioTrack track)
+    public void AddTrackToFavorites(ulong userId, AudioTrack track)
     {
-        if (UserFavoritesRepository.IsFavorited(userId, track.Id))
+        if (_userFavoritesRepository.IsFavorited(userId, track.Id))
         {
             Log.Information("Track {Track} is already favorited by {User}", track, userId);
             return;
         }
 
-        UserFavoritesRepository.Add(new UserFavorite(userId, track.Id));
+        _userFavoritesRepository.AddAsync(new UserFavorite(userId, track.Id));
     }
 
-    public static void RemoveTrackFromFavorites(ulong userId, AudioTrack track)
+    public void RemoveTrackFromFavorites(ulong userId, AudioTrack track)
     {
-        if (!UserFavoritesRepository.IsFavorited(userId, track.Id))
+        if (!_userFavoritesRepository.IsFavorited(userId, track.Id))
         {
             Log.Information("Track {Track} is not favorited by {User}", track, userId);
             return;
         }
 
-        UserFavoritesRepository.DeleteByUserAndTrackId(userId, track.Id);
+        _userFavoritesRepository.DeleteByUserAndTrackIdAsync(userId, track.Id);
     }
 }

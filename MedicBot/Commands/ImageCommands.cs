@@ -2,20 +2,28 @@
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
 using DSharpPlus.Interactivity.Extensions;
+using MedicBot.Manager;
 using MedicBot.Utils;
 
-namespace MedicBot;
+namespace MedicBot.Commands;
 
 [Group("image")]
 [Aliases("im")]
 public class ImageCommands : BaseCommandModule
 {
+    private readonly IImageManager _imageManager;
+
+    public ImageCommands(IImageManager imageManager)
+    {
+        _imageManager = imageManager;
+    }
+
     [Command("add")]
     public async Task AddCommand(CommandContext ctx, [RemainingText] string imageName)
     {
         try
         {
-            await ImageManager.AddAsync(imageName, ctx.Message.Author.Id, ctx.Message.GetFirstAttachment().Url);
+            await _imageManager.AddAsync(imageName, ctx.Message.Author.Id, ctx.Message.GetFirstAttachment().Url);
         }
         catch (Exception e)
         {
@@ -32,7 +40,7 @@ public class ImageCommands : BaseCommandModule
     {
         try
         {
-            using var fileStream = await ImageManager.FindAndOpenAsync(imageName);
+            using var fileStream = await _imageManager.FindAndOpenAsync(imageName);
             var msg = new DiscordMessageBuilder().AddFile(fileStream);
             await ctx.RespondAsync(msg);
         }
@@ -49,7 +57,7 @@ public class ImageCommands : BaseCommandModule
     {
         try
         {
-            var matchingImages = (await ImageManager.FindAsync(searchTerm, limit)).ToList();
+            var matchingImages = (await _imageManager.FindAsync(searchTerm, limit)).ToList();
             if (matchingImages.Count == 0)
             {
                 await ctx.RespondAsync("No matching images found");
@@ -72,8 +80,8 @@ public class ImageCommands : BaseCommandModule
     {
         try
         {
-            var imageToDelete = ImageManager.FindExact(imageName);
-            using (var fileStream = ImageManager.OpenImage(imageToDelete))
+            var imageToDelete = _imageManager.FindExact(imageName);
+            using (var fileStream = _imageManager.OpenImage(imageToDelete))
             {
                 var msg = new DiscordMessageBuilder().AddFile(fileStream).WithContent("Are you sure you want to delete this masterpiece? (Y or wait for timeout)");
                 await ctx.RespondAsync(msg);
@@ -86,7 +94,7 @@ public class ImageCommands : BaseCommandModule
 
             if (!result.TimedOut)
             {
-                var response = await ImageManager.DeleteAsync(imageToDelete, ctx.User.Id);
+                var response = await _imageManager.DeleteAsync(imageToDelete, ctx.User.Id);
                 await ctx.RespondAsync(response);
             }
             else

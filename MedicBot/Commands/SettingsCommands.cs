@@ -1,6 +1,7 @@
 ﻿using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
+using MedicBot.EventHandler;
 using MedicBot.Repository;
 using MedicBot.Utils;
 
@@ -10,6 +11,15 @@ namespace MedicBot.Commands;
 [Aliases("settings")]
 public class SettingsCommands : BaseCommandModule
 {
+    private readonly ISettingsRepository _settingsRepository;
+    private readonly BotSettingHandler _botSettingHandler;
+
+    public SettingsCommands(ISettingsRepository settingsRepository, BotSettingHandler botSettingHandler)
+    {
+        _settingsRepository = settingsRepository;
+        _botSettingHandler = botSettingHandler;
+    }
+
     [Command("set")]
     public async Task SettingSetCommand(CommandContext ctx, string key, [RemainingText] string value)
     {
@@ -19,21 +29,22 @@ public class SettingsCommands : BaseCommandModule
             return;
         }
 
-        SettingsRepository.Set(key, value, ctx.IsPrivateChatWithOwner());
+        _settingsRepository.Set(key, value, ctx.IsPrivateChatWithOwner());
+        _botSettingHandler.BotSettingChangedHandler(key);
         await ctx.Message.RespondThumbsUpAsync();
     }
 
     [Command("delete")]
     public async Task SettingDeleteCommand(CommandContext ctx, string key)
     {
-        SettingsRepository.Delete(key);
+        _settingsRepository.Delete(key);
         await ctx.Message.RespondThumbsUpAsync();
     }
 
     [Command("get")]
     public async Task SettingGetCommand(CommandContext ctx, string key)
     {
-        var botSetting = SettingsRepository.Get(key, ctx.IsPrivateChatWithOwner());
+        var botSetting = _settingsRepository.Get(key, ctx.IsPrivateChatWithOwner());
         if (botSetting != null)
         {
             await ctx.RespondAsync($"Setting {key} has value: {botSetting.Value}");
@@ -47,7 +58,7 @@ public class SettingsCommands : BaseCommandModule
     [Command("get")]
     public async Task SettingGetCommand(CommandContext ctx)
     {
-        var allSettings = SettingsRepository.All(ctx.IsPrivateChatWithOwner());
+        var allSettings = _settingsRepository.All(ctx.IsPrivateChatWithOwner());
         var builder = new DiscordEmbedBuilder().WithTitle("MedicBot Settings");
         foreach (var botSetting in allSettings)
         {

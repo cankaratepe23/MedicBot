@@ -1,6 +1,5 @@
 ﻿using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
-using MedicBot.Manager;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
@@ -12,11 +11,18 @@ namespace MedicBot.Commands;
 [RequireOwner]
 public class BaseCommands : BaseCommandModule
 {
+    private readonly IMongoDatabase _database;
+
+    public BaseCommands(IMongoDatabase database)
+    {
+        _database = database;
+    }
+
     [Command("test")]
     public async Task TestCommand(CommandContext ctx, [RemainingText] string remainingText)
     {
         Log.Information("Test command called by {User}", ctx.User);
-        var firstTrack = await MongoDbManager.Database.GetCollection<BsonDocument>("medicbot-data")
+        var firstTrack = await _database.GetCollection<BsonDocument>("medicbot-data")
                                 .AsQueryable()
                                 .FirstOrDefaultAsync();
         var trackName = firstTrack is null ? "**null**" : firstTrack["Name"];

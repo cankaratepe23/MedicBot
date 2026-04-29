@@ -1,32 +1,35 @@
-﻿using MedicBot.EventHandler;
-using MedicBot.Manager;
-using MedicBot.Model;
+﻿using MedicBot.Model;
 using MedicBot.Utils;
 using MongoDB.Driver;
 using Serilog;
 
 namespace MedicBot.Repository;
 
-public static class SettingsRepository
+public class SettingsRepository : ISettingsRepository
 {
-    private static readonly IMongoCollection<BotSetting> SettingsCollection;
+    private readonly IMongoCollection<BotSetting> _collection;
 
-    static SettingsRepository()
+    public SettingsRepository(IMongoDatabase database)
     {
-        SettingsCollection = MongoDbManager.Database.GetCollection<BotSetting>(BotSetting.CollectionName);
-        Init(Constants.MinNumberOfUsersNeededToEarnPoints, 2);
-        Init(Constants.DefaultScore, 10);
-        Init(Constants.PriceIncreasePerUse, 1);
-        Init(Constants.PriceDecreasePerMinute, 1);
-        Init(Constants.PriceMaximum, 100);
-        Init(Constants.RandomTimeout, -1);
-        Init(Constants.SillyZonkaWonka, false);
+        _collection = database.GetCollection<BotSetting>(BotSetting.CollectionName);
+        InitDefaults();
         Log.Information(Constants.DbCollectionInitializedBotSettings);
     }
 
-    public static BotSetting? Get(string key, bool includeHidden = false)
+    private void InitDefaults()
     {
-        var result = SettingsCollection.Find(s => s.Key == key).FirstOrDefault();
+        InitDefault(Constants.MinNumberOfUsersNeededToEarnPoints, 2);
+        InitDefault(Constants.DefaultScore, 10);
+        InitDefault(Constants.PriceIncreasePerUse, 1);
+        InitDefault(Constants.PriceDecreasePerMinute, 1);
+        InitDefault(Constants.PriceMaximum, 100);
+        InitDefault(Constants.RandomTimeout, -1);
+        InitDefault(Constants.SillyZonkaWonka, false);
+    }
+
+    public BotSetting? Get(string key, bool includeHidden = false)
+    {
+        var result = _collection.Find(s => s.Key == key).FirstOrDefault();
         if (result != null && result.Key != null)
         {
             if (!includeHidden && Constants.HiddenSettingsKeys.Contains(result.Key))
@@ -38,16 +41,16 @@ public static class SettingsRepository
         return result;
     }
 
-    public static T? GetValue<T>(string key)
+    public T? GetValue<T>(string key)
     {
         var botSetting = Get(key, true);
 
         return (T?) botSetting?.Value;
     }
 
-    public static IEnumerable<BotSetting> All(bool includeHidden = false)
+    public IEnumerable<BotSetting> All(bool includeHidden = false)
     {
-        var allSettings = SettingsCollection.Find(FilterDefinition<BotSetting>.Empty).ToEnumerable();
+        var allSettings = _collection.Find(FilterDefinition<BotSetting>.Empty).ToEnumerable();
         if (!includeHidden)
         {
             allSettings = allSettings.Where(s => s.Key != null && !Constants.HiddenSettingsKeys.Contains(s.Key));
@@ -55,7 +58,7 @@ public static class SettingsRepository
         return allSettings;
     }
 
-    public static void Set(string key, object value, bool includeHidden = false)
+    public void Set(string key, object value, bool includeHidden = false)
     {
         var botSetting = Get(key, includeHidden);
         if (Constants.IntegerSettingKeys.Contains(key))
@@ -72,14 +75,10 @@ public static class SettingsRepository
             botSetting.Value = value;
         }
 
-        SettingsCollection.ReplaceOne(s => s.Key == botSetting.Key, botSetting, new ReplaceOptions {IsUpsert = true});
-        if (Constants.ObservedSettingKeys.Contains(key))
-        {
-            BotSettingHandler.BotSettingChangedHandler(key);
-        }
+        _collection.ReplaceOne(s => s.Key == botSetting.Key, botSetting, new ReplaceOptions {IsUpsert = true});
     }
 
-    private static void Init(string key, object value)
+    private void InitDefault(string key, object value)
     {
         var botSetting = Get(key, true);
         if (Constants.IntegerSettingKeys.Contains(key))
@@ -92,11 +91,11 @@ public static class SettingsRepository
             return;
         }
 
-        SettingsCollection.InsertOne(new BotSetting(key, value));
+        _collection.InsertOne(new BotSetting(key, value));
     }
 
-    public static void Delete(string key)
+    public void Delete(string key)
     {
-        SettingsCollection.DeleteMany(s => s.Key == key);
+        _collection.DeleteMany(s => s.Key == key);
     }
 }

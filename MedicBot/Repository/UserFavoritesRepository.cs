@@ -1,4 +1,3 @@
-using MedicBot.Manager;
 using MedicBot.Model;
 using MedicBot.Utils;
 using MongoDB.Bson;
@@ -7,39 +6,38 @@ using Serilog;
 
 namespace MedicBot.Repository;
 
-public static class UserFavoritesRepository
+public class UserFavoritesRepository : IUserFavoritesRepository
 {
-    private static readonly IMongoCollection<UserFavorite> UserFavoritesCollection;
+    private readonly IMongoCollection<UserFavorite> _collection;
 
-    static UserFavoritesRepository()
+    public UserFavoritesRepository(IMongoDatabase database)
     {
-        // Ensure db and collection is created.
-        UserFavoritesCollection = MongoDbManager.Database.GetCollection<UserFavorite>(UserFavorite.CollectionName);
+        _collection = database.GetCollection<UserFavorite>(UserFavorite.CollectionName);
         Log.Information(Constants.DbCollectionInitializedUserFavorites);
     }
 
-    public static IEnumerable<UserFavorite> GetUserFavorites(ulong userId)
+    public IEnumerable<UserFavorite> GetUserFavorites(ulong userId)
     {
-        return UserFavoritesCollection.Find(f => f.UserId == userId).ToEnumerable();
+        return _collection.Find(f => f.UserId == userId).ToEnumerable();
     }
 
-    public static bool IsFavorited(ulong userId, ObjectId trackId)
+    public bool IsFavorited(ulong userId, ObjectId trackId)
     {
-        return UserFavoritesCollection.Find(f => f.UserId == userId && f.TrackId == trackId).Any();
+        return _collection.Find(f => f.UserId == userId && f.TrackId == trackId).Any();
     }
 
-    public static async void Add(UserFavorite userFavorite)
+    public async Task AddAsync(UserFavorite userFavorite)
     {
-        await UserFavoritesCollection.InsertOneAsync(userFavorite);
+        await _collection.InsertOneAsync(userFavorite);
     }
 
-    public static async void Delete(ObjectId id)
+    public async Task DeleteAsync(ObjectId id)
     {
-        await UserFavoritesCollection.DeleteOneAsync(u => u.Id == id);
+        await _collection.DeleteOneAsync(u => u.Id == id);
     }
 
-    public static async void DeleteByUserAndTrackId(ulong userId, ObjectId trackId)
+    public async Task DeleteByUserAndTrackIdAsync(ulong userId, ObjectId trackId)
     {
-        await UserFavoritesCollection.DeleteOneAsync(u => u.UserId == userId && u.TrackId == trackId);
+        await _collection.DeleteOneAsync(u => u.UserId == userId && u.TrackId == trackId);
     }
 }

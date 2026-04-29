@@ -1,36 +1,32 @@
 ﻿using DSharpPlus;
 using ImageMagick;
 using MedicBot.Exceptions;
+using MedicBot.Model;
+using MedicBot.Repository;
 using MedicBot.Utils;
 using Serilog;
 
-namespace MedicBot;
-public static class ImageManager
-{
-    // TODO Remove if unused
-    private static DiscordClient Client { get; set; } = null!;
-    private static string ImagesPath { get; set; } = null!;
-    private static string TempFilesPath { get; set; } = null!;
+namespace MedicBot.Manager;
 
-    public static void Init(DiscordClient client, string imagesPath, string tempFilesPath)
+public class ImageManager : IImageManager
+{
+    private readonly DiscordClient _client;
+    private readonly IImageRepository _imageRepository;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly string _imagesPath;
+    private readonly string _tempFilesPath;
+
+    public ImageManager(DiscordClient client, IImageRepository imageRepository, IHttpClientFactory httpClientFactory)
     {
-        Client = client;
-        ImagesPath = imagesPath;
-        TempFilesPath = tempFilesPath;
+        _client = client;
+        _imageRepository = imageRepository;
+        _httpClientFactory = httpClientFactory;
+        _imagesPath = Constants.ImagesPath;
+        _tempFilesPath = Constants.TempFilesPath;
     }
 
-    public static async Task AddAsync(string imageName, ulong userId, string url)
+    public async Task AddAsync(string imageName, ulong userId, string url)
     {
-        // TODO: De-duplicate this code (see FindAync as well)
-        // Middleware/pre-processor to handle incoming files?
-        // File downloader?
-        // Some kind of repository interface to call .NameExists() without knowing whether incoming file is AudioTrack or Image.
-        // OR : Generic class/methods to do this (Maybe consider this first?)
-
-        // Maybe don't do any of the above idk
-
-        // Same duplication occurs in Repository classes as well, so maybe extract common methods into "base" repository. Or completely make the repository classes generic.
-
         if (!imageName.IsValidFileName())
         {
             Log.Warning("{Filename} has invalid characters", imageName);
@@ -49,7 +45,7 @@ public static class ImageManager
                 "The file you sent has no extension. Please add a valid extension to the file before sending it.");
         }
 
-        if (ImageRepository.NameExists(imageName))
+        if (_imageRepository.NameExists(imageName))
         {
             Log.Warning("An Image with the name {imageName} already exists", imageName);
             throw new ImageExistsException($"An Image with the name {imageName} already exists.");
@@ -58,11 +54,12 @@ public static class ImageManager
         var fileExtension = url[url.LastIndexOf('.')..];
         Log.Information("Detected file extension: {FileExtension}", fileExtension);
         var fileName = imageName + fileExtension;
-        var filePath = string.Join('/', ImagesPath, fileName);
+        var filePath = string.Join('/', _imagesPath, fileName);
 
         {
+            var httpClient = _httpClientFactory.CreateClient();
             Log.Information("Downloading file to {FilePath}", filePath);
-            await using var stream = await Program.Client.GetStreamAsync(url);
+            await using var stream = await httpClient.GetStreamAsync(url);
             await using var fileStream = File.OpenWrite(filePath);
             await stream.CopyToAsync(fileStream);
             await fileStream.FlushAsync();
@@ -77,7 +74,7 @@ public static class ImageManager
             File.Delete(originalFilePath);
         }
 
-        ImageRepository.Add(new ReactionImage() { Name = imageName, Path = filePath, OwnerId = userId });
+        _imageRepository.Add(new ReactionImage() { Name = imageName, Path = filePath, OwnerId = userId });
     }
 
     private static string ConvertImage(string imagePath)
@@ -90,7 +87,7 @@ public static class ImageManager
         return newImagePath;
     }
 
-    public static async Task<IEnumerable<ReactionImage>> FindAsync(string searchQuery, long limit = 10)
+    public async Task<IEnumerable<ReactionImage>> FindAsync(string searchQuery, long limit = 10)
     {
         string? tag = null;
         searchQuery = searchQuery.Trim();
@@ -105,22 +102,22 @@ public static class ImageManager
         {
             if (limit == 1)
             {
-                var randomImage = await ImageRepository.Random(tag);
+                var randomImage = await _imageRepository.Random(tag);
                 return new List<ReactionImage> {randomImage};
             }
 
-            return ImageRepository.All(tag);
+            return _imageRepository.All(tag);
         }
 
         if (searchQuery.StartsWith('\"') && searchQuery.EndsWith('"'))
         {
-            return ImageRepository.FindAllByName(searchQuery.Trim('"'), tag);
+            return _imageRepository.FindAllByName(searchQuery.Trim('"'), tag);
         }
 
-        return await ImageRepository.FindMany(searchQuery, limit, tag);
+        return await _imageRepository.FindMany(searchQuery, limit, tag);
     }
 
-    public static async Task<FileStream> FindAndOpenAsync(string imageName)
+    public async Task<FileStream> FindAndOpenAsync(string imageName)
     {
         var image = (await FindAsync(imageName)).FirstOrDefault();
         if (image == null)
@@ -132,14 +129,14 @@ public static class ImageManager
         return OpenImage(image);
     }
 
-    public static FileStream OpenImage(ReactionImage image)
+    public FileStream OpenImage(ReactionImage image)
     {
         return File.OpenRead(image.Path);
     }
 
-    public static ReactionImage FindExact(string imageName)
+    public ReactionImage FindExact(string imageName)
     {
-        var image = ImageRepository.FindByNameExact(imageName);
+        var image = _imageRepository.FindByNameExact(imageName);
         if (image == null)
         {
             Log.Warning("No image was found with name: {Name}", imageName);
@@ -150,13 +147,13 @@ public static class ImageManager
         return image;
     }
 
-    public static async Task<string> DeleteAsync(ReactionImage image, ulong userId)
+    public async Task<string> DeleteAsync(ReactionImage image, ulong userId)
     {
-        if (image.OwnerId != userId && Client.CurrentUser.Id != userId)
+        if (image.OwnerId != userId && _client.CurrentUser.Id != userId)
         {
             Log.Warning("A non-owner or non-admin user {UserId} attempted deleting the following image: {@Image}",
                 userId, image);
-            var user = await Client.GetUserAsync(userId);
+            var user = await _client.GetUserAsync(userId);
             if (user != null)
             {
                 Log.Warning("Offending user of the unauthorized delete operation: {User}", user);
@@ -165,13 +162,13 @@ public static class ImageManager
             throw new UnauthorizedException("You need to be the owner of this reaction image to delete it.");
         }
 
-        ImageRepository.Delete(image.Id);
+        _imageRepository.Delete(image.Id);
         File.Delete(image.Path);
 
         return GetRandomDeletionResponse();
     }
 
-    public static async Task<string> DeleteAsync(string imageName, ulong userId)
+    public async Task<string> DeleteAsync(string imageName, ulong userId)
     {
         var image = FindExact(imageName);
         return await DeleteAsync(image, userId);
@@ -179,7 +176,6 @@ public static class ImageManager
 
     private static string GetRandomDeletionResponse()
     {
-        // TODO Move this somewhere better
         var responses = new string[]
         {
             "Poof! Deleted this masterpiece.",
@@ -193,7 +189,7 @@ public static class ImageManager
             "Picture, picture on the screen, who's the deleted one? Oh, it's you!",
             "That image just joined the ranks of 'Gone but not forgotten... because I have no backup!'",
             "Deleted in 3... 2... 1! Don't worry; I didn't call NASA for this mission."
-    };
+        };
         return responses[new Random().Next(responses.Length)];
     }
 }

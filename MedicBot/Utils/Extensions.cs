@@ -5,6 +5,7 @@ using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using MedicBot.Exceptions;
 using MedicBot.Model;
+using MedicBot.Repository;
 using Serilog;
 
 namespace MedicBot.Utils;
@@ -134,5 +135,54 @@ public static class Extensions
     public static string ToHttpDate(this DateTimeOffset dateTime)
     {
         return dateTime.ToString("r");
+    }
+
+    public static int CalculateAndDecreasePrice(this AudioTrack audioTrack, ISettingsRepository settingsRepository)
+    {
+        var basePrice = settingsRepository.GetValue<int>(Constants.DefaultScore);
+        if (audioTrack.LastPriceUpdateAt != null)
+        {
+            var roundedMinutesSinceLastPriceUpdate = (int)(DateTime.UtcNow - audioTrack.LastPriceUpdateAt).Value.TotalMinutes;
+            if (roundedMinutesSinceLastPriceUpdate > 0)
+            {
+                var priceDecreasePerMinute = settingsRepository.GetValue<int>(Constants.PriceDecreasePerMinute);
+                var priceDecrease = roundedMinutesSinceLastPriceUpdate * priceDecreasePerMinute;
+
+                if (audioTrack.Price - priceDecrease < 0)
+                {
+                    audioTrack.Price = 0;
+                }
+                else
+                {
+                    audioTrack.Price -= priceDecrease;
+                }
+
+                audioTrack.LastPriceUpdateAt = DateTime.UtcNow;
+            }
+        }
+        var effectivePrice = audioTrack.Price + basePrice;
+        return effectivePrice;
+    }
+
+    public static void CalculateAndIncreasePrice(this AudioTrack audioTrack, ISettingsRepository settingsRepository)
+    {
+        var priceIncreasePerUse = settingsRepository.GetValue<int>(Constants.PriceIncreasePerUse);
+        var priceMaximum = settingsRepository.GetValue<int>(Constants.PriceMaximum);
+        if (audioTrack.Price + priceIncreasePerUse > priceMaximum)
+        {
+            audioTrack.Price = priceMaximum;
+        }
+        else
+        {
+            audioTrack.Price += priceIncreasePerUse;
+        }
+        audioTrack.LastPriceUpdateAt = DateTime.UtcNow;
+    }
+
+    public static int CalculateAndSetPrice(this AudioTrack audioTrack, ISettingsRepository settingsRepository)
+    {
+        var effectivePrice = audioTrack.CalculateAndDecreasePrice(settingsRepository);
+        audioTrack.CalculateAndIncreasePrice(settingsRepository);
+        return effectivePrice;
     }
 }

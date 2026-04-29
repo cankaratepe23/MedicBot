@@ -10,6 +10,13 @@ namespace MedicBot.Commands;
 [RequireOwner]
 public class ImportExportCommands : BaseCommandModule
 {
+    private readonly IImportExportManager _importExportManager;
+
+    public ImportExportCommands(IImportExportManager importExportManager)
+    {
+        _importExportManager = importExportManager;
+    }
+
     [Command("import")]
     public async Task ImportCommand(CommandContext ctx)
     {
@@ -17,7 +24,7 @@ public class ImportExportCommands : BaseCommandModule
         await ctx.RespondAsync("Starting import...");
         try
         {
-            await ImportExportManager.Import(ctx.Message.GetFirstAttachment().Url);
+            await _importExportManager.Import(ctx.Message.GetFirstAttachment().Url);
         }
         catch (Exception e)
         {
