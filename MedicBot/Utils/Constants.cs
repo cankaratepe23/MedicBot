@@ -16,10 +16,6 @@ public static class Constants
     public const string LavalinkPassword = "5aJCTF!Z2&*853#79r7!xind*u2LWy";
     public const string LavalinkHttp = "http://127.0.0.1:3332";
     public const string LavalinkWebSocket = "ws://127.0.0.1:3332/v4/websocket";
-    public const string BotTokenEnvironmentVariableName = "MedicBot_Token_Dev";
-    public const string OAuthClientIdEnvironmentVariableName = "MedicBot_OAuth_ClientID";
-    public const string OAuthClientSecretEnvironmentVariableName = "MedicBot_OAuth_ClientSecret";
-    public const string JwtTokenSecretEnvironmentVariableName = "MedicBot_Jwt_Secret";
     public const string LiteDatabasePath = @"Filename=medicbot_store.db";
 
     public const string ThumbsUpUnicode = "👍";

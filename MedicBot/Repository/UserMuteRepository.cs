@@ -1,40 +1,37 @@
-﻿using MedicBot.Manager;
-using MedicBot.Model;
+﻿using MedicBot.Model;
 using MedicBot.Utils;
 using MongoDB.Driver;
 using Serilog;
 
 namespace MedicBot.Repository;
 
-public static class UserMuteRepository
+public class UserMuteRepository : IUserMuteRepository
 {
-    private static readonly IMongoCollection<UserMute> UserMuteCollection;
+    private readonly IMongoCollection<UserMute> _collection;
 
-    static UserMuteRepository()
+    public UserMuteRepository(IMongoDatabase database)
     {
-        // Ensure db and collection is created.
-        UserMuteCollection = MongoDbManager.Database.GetCollection<UserMute>(UserMute.CollectionName);
+        _collection = database.GetCollection<UserMute>(UserMute.CollectionName);
         Log.Information(Constants.DbCollectionInitializedUserMutes);
     }
 
-    public static UserMute? Get(ulong userId)
+    public UserMute? Get(ulong userId)
     {
-        return UserMuteCollection.Find(p => p.Id == userId).FirstOrDefault();
+        return _collection.Find(p => p.Id == userId).FirstOrDefault();
     }
 
-    public static DateTime GetEndDateTime(ulong userId)
+    public DateTime? GetEndDateTime(ulong userId)
     {
-        // TODO NullReferenceException here for non-muted users
-        return UserMuteCollection.Find(p => p.Id == userId).FirstOrDefault().EndDateTime;
+        return _collection.Find(p => p.Id == userId).FirstOrDefault()?.EndDateTime;
     }
 
-    public static async void Set(ulong userId, DateTime endTime)
+    public async Task SetAsync(ulong userId, DateTime endTime)
     {
-        await UserMuteCollection.ReplaceOneAsync(d => d.Id == userId, new UserMute(userId, endTime), new ReplaceOptions {IsUpsert = true});
+        await _collection.ReplaceOneAsync(d => d.Id == userId, new UserMute(userId, endTime), new ReplaceOptions {IsUpsert = true});
     }
 
-    public static void Delete(ulong userId)
+    public void Delete(ulong userId)
     {
-        UserMuteCollection.DeleteMany(u => u.Id == userId);
+        _collection.DeleteMany(u => u.Id == userId);
     }
 }

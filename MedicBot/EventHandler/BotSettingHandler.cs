@@ -2,13 +2,20 @@
 
 namespace MedicBot.EventHandler;
 
-public static class BotSettingHandler
+public class BotSettingHandler
 {
-    public static void BotSettingChangedHandler(string key)
+    private readonly IVoiceStateHandler _voiceStateHandler;
+
+    public BotSettingHandler(IVoiceStateHandler voiceStateHandler)
+    {
+        _voiceStateHandler = voiceStateHandler;
+    }
+
+    public void BotSettingChangedHandler(string key)
     {
         if (key == Constants.MinNumberOfUsersNeededToEarnPoints)
         {
-            VoiceStateHandler.ReloadTracking();
+            _voiceStateHandler.ReloadTracking();
         }
     }
 }

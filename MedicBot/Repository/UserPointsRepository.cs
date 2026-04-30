@@ -1,36 +1,35 @@
-﻿using MedicBot.Manager;
-using MedicBot.Model;
+﻿using MedicBot.Model;
 using MedicBot.Utils;
 using MongoDB.Driver;
 using Serilog;
 
 namespace MedicBot.Repository;
 
-public static class UserPointsRepository
+public class UserPointsRepository : IUserPointsRepository
 {
-    private static readonly IMongoCollection<UserPoints> UserPointsCollection;
+    private readonly IMongoCollection<UserPoints> _collection;
+    private readonly ISettingsRepository _settingsRepository;
 
-    static UserPointsRepository()
+    public UserPointsRepository(IMongoDatabase database, ISettingsRepository settingsRepository)
     {
-        // Ensure db and collection is created.
-        UserPointsCollection = MongoDbManager.Database.GetCollection<UserPoints>(UserPoints.CollectionName);
+        _collection = database.GetCollection<UserPoints>(UserPoints.CollectionName);
+        _settingsRepository = settingsRepository;
         Log.Information(Constants.DbCollectionInitializedUserPoints);
     }
 
-    public static UserPoints? Get(ulong userId)
+    public UserPoints? Get(ulong userId)
     {
-        return UserPointsCollection.Find(p => p.Id == userId).FirstOrDefault();
+        return _collection.Find(p => p.Id == userId).FirstOrDefault();
     }
 
-    public static int GetPoints(ulong userId)
+    public int GetPoints(ulong userId)
     {
-        // TODO Make initial balance configurable
         var userPoints = Get(userId) ??
-                         AddPoints(userId, SettingsRepository.GetValue<int>(Constants.DefaultScore) * 100);
+                         AddPoints(userId, _settingsRepository.GetValue<int>(Constants.DefaultScore) * 100);
         return userPoints.Score;
     }
 
-    public static UserPoints AddPoints(ulong userId, int score)
+    public UserPoints AddPoints(ulong userId, int score)
     {
         var currentPoints = Get(userId);
 
@@ -43,7 +42,7 @@ public static class UserPointsRepository
             currentPoints.Score += score;
         }
 
-        UserPointsCollection.ReplaceOne(p => p.Id == currentPoints.Id, currentPoints,
+        _collection.ReplaceOne(p => p.Id == currentPoints.Id, currentPoints,
             new ReplaceOptions {IsUpsert = true});
         return currentPoints;
     }

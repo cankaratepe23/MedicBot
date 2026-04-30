@@ -1,4 +1,4 @@
-﻿using MedicBot.Manager;
+﻿using MedicBot.Model;
 using MedicBot.Utils;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -6,19 +6,19 @@ using MongoDB.Driver.Linq;
 using MongoDB.Driver.Search;
 using Serilog;
 
-namespace MedicBot;
-public static class ImageRepository
-{
-    private static readonly IMongoCollection<ReactionImage> ImagesCollection;
+namespace MedicBot.Repository;
 
-    static ImageRepository()
+public class ImageRepository : IImageRepository
+{
+    private readonly IMongoCollection<ReactionImage> _collection;
+
+    public ImageRepository(IMongoDatabase database)
     {
-        var collection = MongoDbManager.Database.GetCollection<ReactionImage>(ReactionImage.CollectionName);
-        ImagesCollection = collection;
+        _collection = database.GetCollection<ReactionImage>(ReactionImage.CollectionName);
         Log.Information(Constants.DbCollectionInitializedReactionImages);
     }
 
-    public static Task<List<ReactionImage>> FindMany(string searchQuery, long limit, string? tag = null)
+    public Task<List<ReactionImage>> FindMany(string searchQuery, long limit, string? tag = null)
     {
         if (string.IsNullOrWhiteSpace(tag))
         {
@@ -28,9 +28,9 @@ public static class ImageRepository
         return FindManyWithTagAtlas(searchQuery, tag, limit);
     }
 
-    private static async Task<List<ReactionImage>> FindManyAtlas(string searchTerm, long limit)
+    private async Task<List<ReactionImage>> FindManyAtlas(string searchTerm, long limit)
     {
-        var results = await ImagesCollection.Aggregate()
+        var results = await _collection.Aggregate()
             .Search(
                 Builders<ReactionImage>.Search.Compound()
                     .Should(Builders<ReactionImage>.Search.Autocomplete(
@@ -47,9 +47,9 @@ public static class ImageRepository
         return results;
     }
 
-    private static async Task<List<ReactionImage>> FindManyWithTagAtlas(string searchTerm, string tag, long limit)
+    private async Task<List<ReactionImage>> FindManyWithTagAtlas(string searchTerm, string tag, long limit)
     {
-        var results = await ImagesCollection.Aggregate()
+        var results = await _collection.Aggregate()
             .Search(
                 Builders<ReactionImage>.Search.Compound()
                     .Should(Builders<ReactionImage>.Search.Autocomplete(
@@ -67,58 +67,56 @@ public static class ImageRepository
         return results;
     }
 
-
-    public static ReactionImage? FindByNameExact(string name)
+    public ReactionImage? FindByNameExact(string name)
     {
-        return ImagesCollection.Find(a => a.Name == name).FirstOrDefault();
+        return _collection.Find(a => a.Name == name).FirstOrDefault();
     }
 
-    public static IEnumerable<ReactionImage> FindAllByName(string searchTerm, string? tag = null)
-    {
-        // Check if this method should "ignore" limits from Manager class
-        if (string.IsNullOrWhiteSpace(tag))
-        {
-            return ImagesCollection.Find(t => t.Name.Contains(searchTerm)).ToEnumerable();
-        }
-
-        return ImagesCollection.Find(t => t.Name.Contains(searchTerm) && t.Tags.Contains(tag)).ToEnumerable();
-    }
-
-    public static async Task<ReactionImage> Random(string? tag = null)
+    public IEnumerable<ReactionImage> FindAllByName(string searchTerm, string? tag = null)
     {
         if (string.IsNullOrWhiteSpace(tag))
         {
-            return await ImagesCollection.AsQueryable().Sample(1).FirstOrDefaultAsync();
+            return _collection.Find(t => t.Name.Contains(searchTerm)).ToEnumerable();
         }
 
-        return await ImagesCollection.AsQueryable().Where(t => t.Tags.Contains(tag)).Sample(1).FirstOrDefaultAsync();
+        return _collection.Find(t => t.Name.Contains(searchTerm) && t.Tags.Contains(tag)).ToEnumerable();
     }
 
-    public static IEnumerable<ReactionImage> All(string? tag = null)
+    public async Task<ReactionImage> Random(string? tag = null)
+    {
+        if (string.IsNullOrWhiteSpace(tag))
+        {
+            return await _collection.AsQueryable().Sample(1).FirstOrDefaultAsync();
+        }
+
+        return await _collection.AsQueryable().Where(t => t.Tags.Contains(tag)).Sample(1).FirstOrDefaultAsync();
+    }
+
+    public IEnumerable<ReactionImage> All(string? tag = null)
     {
         return string.IsNullOrWhiteSpace(tag)
-            ? ImagesCollection.Find(FilterDefinition<ReactionImage>.Empty).ToEnumerable()
-            : ImagesCollection.Find(t => t.Tags.Contains(tag)).ToList();
+            ? _collection.Find(FilterDefinition<ReactionImage>.Empty).ToEnumerable()
+            : _collection.Find(t => t.Tags.Contains(tag)).ToList();
     }
 
-    public static bool NameExists(string name)
+    public bool NameExists(string name)
     {
-        return ImagesCollection.Find(a => a.Name == name).Any();
+        return _collection.Find(a => a.Name == name).Any();
     }
 
-    internal static void Add(ReactionImage reactionImage)
+    public void Add(ReactionImage reactionImage)
     {
-        ImagesCollection.InsertOne(reactionImage);
+        _collection.InsertOne(reactionImage);
     }
 
-    public static bool Update(ReactionImage reactionImage)
+    public bool Update(ReactionImage reactionImage)
     {
-        var replaceResult = ImagesCollection.ReplaceOne(a => a.Id == reactionImage.Id, reactionImage);
+        var replaceResult = _collection.ReplaceOne(a => a.Id == reactionImage.Id, reactionImage);
         return replaceResult.MatchedCount == 1;
     }
 
-    public static void Delete(ObjectId id)
+    public void Delete(ObjectId id)
     {
-        ImagesCollection.DeleteOne(t => t.Id == id);
+        _collection.DeleteOne(t => t.Id == id);
     }
 }

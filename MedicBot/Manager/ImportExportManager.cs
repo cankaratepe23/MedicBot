@@ -6,14 +6,24 @@ using Serilog;
 
 namespace MedicBot.Manager;
 
-public static class ImportExportManager
+public class ImportExportManager : IImportExportManager
 {
-    public static async Task<int> Import(string url)
+    private readonly IAudioRepository _audioRepository;
+    private readonly IHttpClientFactory _httpClientFactory;
+
+    public ImportExportManager(IAudioRepository audioRepository, IHttpClientFactory httpClientFactory)
+    {
+        _audioRepository = audioRepository;
+        _httpClientFactory = httpClientFactory;
+    }
+
+    public async Task<int> Import(string url)
     {
         var numberOfEntriesAdded = 0;
-        var jsonString = "";
+        var client = _httpClientFactory.CreateClient();
+        string jsonString;
         {
-            await using var stream = await Program.Client.GetStreamAsync(url);
+            await using var stream = await client.GetStreamAsync(url);
             using var streamReader = new StreamReader(stream);
             jsonString = await streamReader.ReadToEndAsync();
         }
@@ -35,7 +45,7 @@ public static class ImportExportManager
                 audioEntry.OwnerId
             );
             Log.Verbose("Converted to audio track: {@AudioTrack}", audioTrack);
-            AudioRepository.Add(audioTrack);
+            _audioRepository.Add(audioTrack);
             Log.Verbose("Added the previous audio track");
             numberOfEntriesAdded++;
         }

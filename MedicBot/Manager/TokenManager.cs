@@ -2,26 +2,32 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using MedicBot.Options;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace MedicBot.Manager;
 
-public static class TokenManager
+public class TokenManager : ITokenManager
 {
-    private static string JwtSecret { get; set; } = null!;
-    public static readonly TimeSpan AccessTokenLifetime = TimeSpan.FromMinutes(15);
-    public static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(30);
+    private readonly string _jwtSecret;
 
-    public static void Init(string jwtSecret)
+    public TimeSpan AccessTokenLifetime { get; }
+    public TimeSpan RefreshTokenLifetime { get; }
+
+    public TokenManager(IOptions<AuthOptions> authOptions)
     {
-        JwtSecret = jwtSecret;
+        _jwtSecret = authOptions.Value.JwtSecret;
+        AccessTokenLifetime = authOptions.Value.AccessTokenLifetime;
+        RefreshTokenLifetime = authOptions.Value.RefreshTokenLifetime;
     }
-    public static string GenerateTemporaryToken(string userId, TimeSpan? duration = null)
+
+    public string GenerateTemporaryToken(string userId, TimeSpan? duration = null)
     {
         var durationValue = duration ?? AccessTokenLifetime;
 
         var tokenHandler = new JwtSecurityTokenHandler();
-        var key = Convert.FromBase64String(JwtSecret);
+        var key = Convert.FromBase64String(_jwtSecret);
         var token = tokenHandler.CreateToken(new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId)}),
@@ -31,13 +37,13 @@ public static class TokenManager
         return tokenHandler.WriteToken(token);
     }
 
-    public static string GenerateRefreshToken()
+    public string GenerateRefreshToken()
     {
         var randomBytes = RandomNumberGenerator.GetBytes(32);
         return Base64UrlEncode(randomBytes);
     }
 
-    public static string HashToken(string token)
+    public string HashToken(string token)
     {
         using var sha256 = SHA256.Create();
         var tokenBytes = Encoding.UTF8.GetBytes(token);

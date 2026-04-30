@@ -16,14 +16,22 @@ namespace MedicBot.Controller;
 [Route("[controller]")]
 public class AudioController : ControllerBase
 {
+    private readonly IAudioManager _audioManager;
+    private readonly IUserManager _userManager;
+
+    public AudioController(IAudioManager audioManager, IUserManager userManager)
+    {
+        _audioManager = audioManager;
+        _userManager = userManager;
+    }
+
     [HttpGet("JoinGuild/{guildId}")]
     public async Task<IActionResult> JoinGuild(ulong guildId)
     {
         try
         {
-            await AudioManager.JoinGuildIdAsync(guildId);
+            await _audioManager.JoinGuildIdAsync(guildId);
         }
-        /* TODO Maybe send different error codes for different types of exceptions like lavalink exception, guild not found exception etc. */
         catch (Exception e)
         {
             return BadRequest(e.Message);
@@ -37,7 +45,7 @@ public class AudioController : ControllerBase
     {
         try
         {
-            await AudioManager.JoinChannelIdAsync(channelId);
+            await _audioManager.JoinChannelIdAsync(channelId);
         }
         catch (Exception e)
         {
@@ -52,7 +60,7 @@ public class AudioController : ControllerBase
     {
         try
         {
-            await AudioManager.LeaveAsync(guildId);
+            await _audioManager.LeaveAsync(guildId);
         }
         catch (Exception e)
         {
@@ -62,18 +70,17 @@ public class AudioController : ControllerBase
         return Ok();
     }
 
-    // TODO This should be POST, why is it GET?
-    [HttpGet("Play/{guildId}")] // TODO Play/audioId & guild ID from query instead
+    [HttpGet("Play/{guildId}")]
     [Authorize(Policy = "CombinedPolicy")]
     public async Task<IActionResult> Play(ulong guildId, [FromQuery] string audioNameOrId,
         [FromQuery] bool searchById = false)
     {
-        var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
+        var userId = GetCurrentUserId();
         int priceUsed = -1;
-        Log.Debug("User's ID is: {UserId}", userClaim.Value);
+        Log.Debug("User's ID is: {UserId}", userId);
         try
         {
-            priceUsed = await AudioManager.PlayAsync(audioNameOrId, guildId, Convert.ToUInt64(userClaim.Value), searchById);
+            priceUsed = await _audioManager.PlayAsync(audioNameOrId, guildId, userId, searchById);
         }
         catch (AudioTrackNotFoundException e)
         {
@@ -89,11 +96,9 @@ public class AudioController : ControllerBase
     {
         try
         {
-            var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
-            Log.Debug("User's ID is: {UserId}", userClaim.Value);
-            var userId = Convert.ToUInt64(userClaim.Value);
-            var userFavoriteTracks = UserManager.GetFavoriteTrackIds(userId);
-            var recentTracks = AudioManager.GetRecentAudioTracks(Convert.ToUInt64(userClaim.Value))
+            var userId = GetCurrentUserId();
+            var userFavoriteTracks = _userManager.GetFavoriteTrackIds(userId);
+            var recentTracks = _audioManager.GetRecentAudioTracks(userId)
                                             .Select(t => new RecentAudioTrackDto
                                             {
                                                 AudioTrackDto = t.AudioTrack?.ToDto().Enrich(userFavoriteTracks.Contains(t.AudioTrack.Id)),
@@ -111,19 +116,17 @@ public class AudioController : ControllerBase
     [Authorize(Policy = "CombinedPolicy")]
     public async Task<IActionResult> Search([FromQuery] string q, [FromQuery] int limit = 10, [FromQuery] bool enriched = false)
     {
-        var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
-        var userId = Convert.ToUInt64(userClaim.Value);
+        var userId = GetCurrentUserId();
         
-        // Clamp limit to maximum of 30
         limit = Math.Clamp(limit, 1, 30);
         
         try
         {
-            var results = await AudioManager.FindAsync(q, limit, null, userId);
+            var results = await _audioManager.FindAsync(q, limit, null, userId);
             
             if (enriched)
             {
-                var userFavoriteTracks = UserManager.GetFavoriteTrackIds(userId);
+                var userFavoriteTracks = _userManager.GetFavoriteTrackIds(userId);
                 var enrichedResults = results.Select(t => t.ToDto().Enrich(userFavoriteTracks.Contains(t.Id)));
                 return Ok(enrichedResults);
             }
@@ -140,20 +143,18 @@ public class AudioController : ControllerBase
     [Authorize(Policy = "CombinedPolicy")]
     public async Task<IActionResult> Get([FromQuery] bool? enriched)
     {
-        var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
-        var userId = Convert.ToUInt64(userClaim.Value);
+        var userId = GetCurrentUserId();
         try
         {
             if (enriched != null && enriched.Value)
             {
-                // TODO Change caching logic to include enriched endpoint
-                var userFavoriteTracks = UserManager.GetFavoriteTrackIds(userId);
-                var allTracksToEnrich = await AudioManager.FindAsync(string.Empty, userId: userId);
+                var userFavoriteTracks = _userManager.GetFavoriteTrackIds(userId);
+                var allTracksToEnrich = await _audioManager.FindAsync(string.Empty, userId: userId);
                 var allTrackDtosEnriched = allTracksToEnrich.Select(t => t.ToDto().Enrich(userFavoriteTracks.Contains(t.Id)));
                 return Ok(allTrackDtosEnriched);
             }
             
-            var lastUpdate = AudioManager.GetLatestUpdateTime();
+            var lastUpdate = _audioManager.GetLatestUpdateTime();
 
             Response.Headers.LastModified = lastUpdate.ToHttpDate();
             Response.Headers.CacheControl = "no-cache";
@@ -171,7 +172,7 @@ public class AudioController : ControllerBase
                 }
             }
 
-            var allTracks = await AudioManager.FindAsync(string.Empty, userId: userId);
+            var allTracks = await _audioManager.FindAsync(string.Empty, userId: userId);
             return Ok(allTracks.Select(t => t.ToDto()));
         }
         catch (Exception e)
@@ -186,10 +187,7 @@ public class AudioController : ControllerBase
     {
         try
         {
-            var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
-            Log.Debug("User's ID is: {UserId}", userClaim.Value);
-
-            var track = AudioManager.FindById(audioId) ?? throw new AudioTrackNotFoundException($"No track was found with ID: {audioId}");
+            var track = _audioManager.FindById(audioId) ?? throw new AudioTrackNotFoundException($"No track was found with ID: {audioId}");
 
             var lastUpdate = DateTimeOffset.FromUnixTimeSeconds(track.Id.Timestamp);
             if (track.LastModifiedAt.HasValue)
@@ -235,10 +233,7 @@ public class AudioController : ControllerBase
     {
         try
         {
-            var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier) ?? throw new InvalidCredentialException();
-            Log.Debug("User's ID is: {UserId}", userClaim.Value);
-
-            var track = AudioManager.FindById(audioId) ?? throw new AudioTrackNotFoundException($"No track was found with ID: {audioId}");
+            var track = _audioManager.FindById(audioId) ?? throw new AudioTrackNotFoundException($"No track was found with ID: {audioId}");
 
             var lastUpdate = DateTimeOffset.FromUnixTimeSeconds(track.Id.Timestamp);
             if (track.LastModifiedAt.HasValue)
@@ -274,5 +269,12 @@ public class AudioController : ControllerBase
         {
             return BadRequest(e.Message);
         }
+    }
+
+    private ulong GetCurrentUserId()
+    {
+        var userClaim = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)
+                        ?? throw new InvalidCredentialException();
+        return Convert.ToUInt64(userClaim.Value);
     }
 }

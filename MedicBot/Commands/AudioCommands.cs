@@ -11,12 +11,23 @@ namespace MedicBot.Commands;
 
 public class AudioCommands : BaseCommandModule
 {
+    private readonly IAudioManager _audioManager;
+    private readonly IUserManager _userManager;
+    private readonly ISettingsRepository _settingsRepository;
+
+    public AudioCommands(IAudioManager audioManager, IUserManager userManager, ISettingsRepository settingsRepository)
+    {
+        _audioManager = audioManager;
+        _userManager = userManager;
+        _settingsRepository = settingsRepository;
+    }
+
     [Command("join")]
     public async Task JoinCommand(CommandContext ctx, DiscordChannel channel)
     {
         try
         {
-            await AudioManager.JoinAsync(channel);
+            await _audioManager.JoinAsync(channel);
         }
         catch (Exception e)
         {
@@ -32,7 +43,7 @@ public class AudioCommands : BaseCommandModule
     {
         try
         {
-            await AudioManager.JoinGuildAsync(ctx.Guild);
+            await _audioManager.JoinGuildAsync(ctx.Guild);
         }
         catch (Exception e)
         {
@@ -46,7 +57,7 @@ public class AudioCommands : BaseCommandModule
     {
         try
         {
-            await AudioManager.LeaveAsync(ctx.Guild);
+            await _audioManager.LeaveAsync(ctx.Guild);
         }
         catch (Exception e)
         {
@@ -60,7 +71,7 @@ public class AudioCommands : BaseCommandModule
     {
         try
         {
-            await AudioManager.AddAsync(audioName, ctx.Message.Author.Id, ctx.Message.GetFirstAttachment().Url);
+            await _audioManager.AddAsync(audioName, ctx.Message.Author.Id, ctx.Message.GetFirstAttachment().Url);
         }
         catch (Exception e)
         {
@@ -71,15 +82,13 @@ public class AudioCommands : BaseCommandModule
         await ctx.Message.RespondThumbsUpAsync();
     }
 
-    // This overload needs to have higher priority than the AddCommand(CommandContext, string) overload,
-    // because if not, the message id is parsed as part of the string.
     [Command("add")]
     [Priority(1)]
     public async Task AddCommand(CommandContext ctx, DiscordMessage message, [RemainingText] string audioName)
     {
         try
         {
-            await AudioManager.AddAsync(audioName, ctx.Message.Author.Id, message.GetFirstAttachment().Url);
+            await _audioManager.AddAsync(audioName, ctx.Message.Author.Id, message.GetFirstAttachment().Url);
         }
         catch (Exception e)
         {
@@ -90,14 +99,12 @@ public class AudioCommands : BaseCommandModule
         await ctx.Message.RespondThumbsUpAsync();
     }
 
-    // TODO Download from YouTube link
-
     [Command("delete")]
     public async Task DeleteCommand(CommandContext ctx, [RemainingText] string audioName)
     {
         try
         {
-            await AudioManager.DeleteAsync(audioName, ctx.User.Id);
+            await _audioManager.DeleteAsync(audioName, ctx.User.Id);
         }
         catch (Exception e)
         {
@@ -121,12 +128,11 @@ public class AudioCommands : BaseCommandModule
         {
             if (ctx.Member is null)
             {
-                // TODO Support DMs for commands
                 await ctx.RespondAsync("Direct messages are not supported yet");
                 return;
             }
 
-            await AudioManager.PlayAsync(audioName, ctx.Guild, ctx.Member, ctx);
+            await _audioManager.PlayAsync(audioName, ctx.Guild, ctx.Member, ctx);
         }
         catch (AudioTrackNotFoundException e)
         {
@@ -148,7 +154,7 @@ public class AudioCommands : BaseCommandModule
     {
         try
         {
-            var matchingTracks = (await AudioManager.FindAsync(searchTerm, limit, ctx.Guild, ctx.User.Id)).ToList();
+            var matchingTracks = (await _audioManager.FindAsync(searchTerm, limit, ctx.Guild, ctx.User.Id)).ToList();
             if (matchingTracks.Count == 0)
             {
                 await ctx.RespondAsync("No matching tracks found");
@@ -170,7 +176,7 @@ public class AudioCommands : BaseCommandModule
     {
         try
         {
-            var newTracks = AudioManager.GetNewTracksAsync(limit);
+            var newTracks = _audioManager.GetNewTracksAsync(limit);
             await ctx.Channel.SendPaginatedMessageAsync(ctx.User,
                 ctx.Client.GetInteractivity().GeneratePagesInEmbed(string.Join("\n", newTracks)));
         }
@@ -186,8 +192,7 @@ public class AudioCommands : BaseCommandModule
     {
         try
         {
-            var recentTracks = AudioManager.GetRecentAudioTracks(ctx.User);
-            var recentTrackNames = recentTracks.Select(t => t.AudioTrack?.Name);
+            var recentTracks = _audioManager.GetRecentAudioTracks(ctx.User);
             await ctx.Channel.SendPaginatedMessageAsync(ctx.User, ctx.Client.GetInteractivity().GeneratePagesInEmbed(string.Join("\n", recentTracks)));
         }
         catch (Exception e)
@@ -202,7 +207,7 @@ public class AudioCommands : BaseCommandModule
     {
         try
         {
-            var lastPlayedTracks = AudioManager.GetLastPlayedTracks(ctx.Guild);
+            var lastPlayedTracks = _audioManager.GetLastPlayedTracks(ctx.Guild);
             if (lastPlayedTracks is null)
             {
                 await ctx.RespondAsync("No tracks have been played yet");
@@ -225,7 +230,7 @@ public class AudioCommands : BaseCommandModule
     {
         try
         {
-            var foundTrack = (await AudioManager.FindAsync(audioName, 1, ctx.Guild, ctx.User.Id)).FirstOrDefault();
+            var foundTrack = (await _audioManager.FindAsync(audioName, 1, ctx.Guild, ctx.User.Id)).FirstOrDefault();
             if (foundTrack == null)
             {
                 throw new AudioTrackNotFoundException(audioName, false);
@@ -241,7 +246,7 @@ public class AudioCommands : BaseCommandModule
             if (!reply.TimedOut)
             {
                 var replyContent = reply.Result.Content.Trim().ToLower();
-                AudioManager.AddTag(foundTrack, replyContent);
+                _audioManager.AddTag(foundTrack, replyContent);
                 await reply.Result.RespondAsync("Added tag " + replyContent + " to " + foundTrack.Name);
             }
             else
@@ -279,7 +284,7 @@ public class AudioCommands : BaseCommandModule
         var voteCount = reactions.SelectMany(r => r.Users).Distinct().Count();
         if (voteCount >= votesNeeded)
         {
-            UserManager.Mute(memberToMute, minutes);
+            _userManager.Mute(memberToMute, minutes);
             await ctx.RespondAsync($"{memberToMute.Mention} you have been muted with {voteCount}/{totalCount} votes!");
         }
         else
@@ -297,8 +302,8 @@ public class AudioCommands : BaseCommandModule
             member = ctx.User;
         }
 
-        var memberPoints = Convert.ToDouble(UserManager.GetPoints(member));
-        var defaultPrice = SettingsRepository.GetValue<int>(Constants.DefaultScore);
+        var memberPoints = Convert.ToDouble(_userManager.GetPoints(member));
+        var defaultPrice = _settingsRepository.GetValue<int>(Constants.DefaultScore);
 
         await ctx.RespondAsync($"You have {memberPoints} points, which means you can play around {Math.Floor(memberPoints / defaultPrice)} tracks.");
     }
@@ -309,7 +314,7 @@ public class AudioCommands : BaseCommandModule
     {
         try
         {
-            var matchingTracks = (await AudioManager.FindAsync(searchTerm, 1, ctx.Guild, ctx.User.Id)).ToList();
+            var matchingTracks = (await _audioManager.FindAsync(searchTerm, 1, ctx.Guild, ctx.User.Id)).ToList();
             if (matchingTracks.Count == 0)
             {
                 await ctx.RespondAsync("No matching tracks found");
@@ -317,7 +322,7 @@ public class AudioCommands : BaseCommandModule
             }
             
             var matchingTrack = matchingTracks[0];
-            var effectivePrice = matchingTrack.CalculateAndDecreasePrice();
+            var effectivePrice = matchingTrack.CalculateAndDecreasePrice(_settingsRepository);
             await ctx.RespondAsync($"Current price for `{matchingTrack.Name}`: {effectivePrice}");
         }
         catch (Exception e)

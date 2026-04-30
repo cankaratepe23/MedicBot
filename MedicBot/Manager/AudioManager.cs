@@ -18,26 +18,44 @@ using SharpCompress.Readers;
 
 namespace MedicBot.Manager;
 
-public static class AudioManager
+public class AudioManager : IAudioManager
 {
-    private static DiscordClient Client { get; set; } = null!;
-    private static IHubContext<PlaybackHub, IPlaybackClient> HubContext { get; set; } = null!;
-    private static IAudioService AudioService { get; set; } = null!;
-    private static string AudioTracksPath { get; set; } = null!;
-    private static string TempFilesPath { get; set; } = null!;
+    private readonly DiscordClient _client;
+    private readonly IHubContext<PlaybackHub, IPlaybackClient> _hubContext;
+    private readonly IAudioService _audioService;
+    private readonly IAudioRepository _audioRepository;
+    private readonly IAudioPlaybackLogRepository _audioPlaybackLogRepository;
+    private readonly ISettingsRepository _settingsRepository;
+    private readonly IUserManager _userManager;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly string _audioTracksPath;
+    private readonly string _tempFilesPath;
 
-    private static Dictionary<ulong, Queue<AudioTrack>> LastPlayedTracks { get; } = new();
+    private readonly Dictionary<ulong, Queue<AudioTrack>> _lastPlayedTracks = new();
 
-    public static void Init(DiscordClient client, IAudioService audioService, IHubContext<PlaybackHub, IPlaybackClient> hubContext, string tracksPath, string tempFilesPath)
+    public AudioManager(
+        DiscordClient client,
+        IAudioService audioService,
+        IHubContext<PlaybackHub, IPlaybackClient> hubContext,
+        IAudioRepository audioRepository,
+        IAudioPlaybackLogRepository audioPlaybackLogRepository,
+        ISettingsRepository settingsRepository,
+        IUserManager userManager,
+        IHttpClientFactory httpClientFactory)
     {
-        Client = client;
-        AudioService = audioService;
-        HubContext = hubContext;
-        AudioTracksPath = tracksPath;
-        TempFilesPath = tempFilesPath;
+        _client = client;
+        _audioService = audioService;
+        _hubContext = hubContext;
+        _audioRepository = audioRepository;
+        _audioPlaybackLogRepository = audioPlaybackLogRepository;
+        _settingsRepository = settingsRepository;
+        _userManager = userManager;
+        _httpClientFactory = httpClientFactory;
+        _audioTracksPath = Constants.AudioTracksPath;
+        _tempFilesPath = Constants.TempFilesPath;
     }
 
-    public static async Task AddAsync(string audioName, ulong userId, string url)
+    public async Task AddAsync(string audioName, ulong userId, string url)
     {
         if (!audioName.IsValidFileName())
         {
@@ -56,7 +74,7 @@ public static class AudioManager
                 "The file you sent has no extension. Please add a valid extension to the file before sending it.");
         }
 
-        if (AudioRepository.NameExists(audioName))
+        if (_audioRepository.NameExists(audioName))
         {
             Log.Warning("An AudioTrack with the name {AudioName} already exists", audioName);
             throw new AudioTrackExistsException($"An AudioTrack with the name {audioName} already exists.");
@@ -65,13 +83,14 @@ public static class AudioManager
         Log.Information("Detected file extension: {FileExtension}", fileExtension);
         var fileName = audioName + fileExtension;
         var filePath = fileExtension.ToLowerInvariant() == ".7z"
-            ? string.Join('/', TempFilesPath, fileName)
-            : string.Join('/', AudioTracksPath, fileName);
+            ? string.Join('/', _tempFilesPath, fileName)
+            : string.Join('/', _audioTracksPath, fileName);
 
         {
+            var httpClient = _httpClientFactory.CreateClient();
             Log.Information("Downloading: {DownloadUrl}", url);
             Log.Information("Downloading file to {FilePath}", filePath);
-            await using var stream = await Program.Client.GetStreamAsync(url);
+            await using var stream = await httpClient.GetStreamAsync(url);
             await using var fileStream = File.OpenWrite(filePath);
             await stream.CopyToAsync(fileStream);
             await fileStream.FlushAsync();
@@ -80,7 +99,7 @@ public static class AudioManager
         if (fileExtension.ToLowerInvariant() == ".7z")
         {
             Log.Information("Extracting 7z...");
-            var filesDirectory = string.Join('/', TempFilesPath, audioName);
+            var filesDirectory = string.Join('/', _tempFilesPath, audioName);
             Directory.CreateDirectory(filesDirectory);
 
             using (var archive = SevenZipArchive.OpenArchive(filePath))
@@ -94,26 +113,25 @@ public static class AudioManager
                 var newAudioFileName = Path.GetFileName(file);
                 var newAudioName = Path.GetFileNameWithoutExtension(newAudioFileName);
                 Log.Information("Adding {AudioTrackName}", newAudioName);
-                var newFilePath = string.Join('/', AudioTracksPath, newAudioFileName);
+                var newFilePath = string.Join('/', _audioTracksPath, newAudioFileName);
                 File.Move(file, newFilePath);
-                if (AudioRepository.NameExists(audioName))
+                if (_audioRepository.NameExists(audioName))
                 {
                     Log.Warning("An AudioTrack with the name {AudioName} already exists", newAudioName);
                     Log.Warning("Skipping adding track with name {AudioName}", newAudioName);
                     continue;
                 }
 
-                AudioRepository.Add(new AudioTrack(newAudioName, newFilePath, userId));
+                _audioRepository.Add(new AudioTrack(newAudioName, newFilePath, userId));
             }
-            // TODO? Delete .7z file after done
         }
         else
         {
-            AudioRepository.Add(new AudioTrack(audioName, filePath, userId));
+            _audioRepository.Add(new AudioTrack(audioName, filePath, userId));
         }
     }
 
-    public static void AddTag(AudioTrack audioTrack, string tagName)
+    public void AddTag(AudioTrack audioTrack, string tagName)
     {
         if (audioTrack.Tags.Contains(tagName))
         {
@@ -121,23 +139,23 @@ public static class AudioManager
         }
 
         audioTrack.Tags.Add(tagName);
-        AudioRepository.Update(audioTrack);
+        _audioRepository.Update(audioTrack);
     }
 
-    public static async Task DeleteAsync(string audioName, ulong userId)
+    public async Task DeleteAsync(string audioName, ulong userId)
     {
-        var audioTrack = AudioRepository.FindByNameExact(audioName);
+        var audioTrack = _audioRepository.FindByNameExact(audioName);
         if (audioTrack == null)
         {
             Log.Warning("No track was found with name: {Name}", audioName);
             throw new AudioTrackNotFoundException($"No track was found with name: {audioName}");
         }
 
-        if (audioTrack.OwnerId != userId && Client.CurrentUser.Id != userId)
+        if (audioTrack.OwnerId != userId && _client.CurrentUser.Id != userId)
         {
             Log.Warning("A non-owner or non-admin user {UserId} attempted deleting the following track: {@AudioTrack}",
                 userId, audioTrack);
-            var user = await Client.GetUserAsync(userId);
+            var user = await _client.GetUserAsync(userId);
             if (user != null)
             {
                 Log.Warning("Offending user of the unauthorized delete operation: {User}", user);
@@ -146,11 +164,11 @@ public static class AudioManager
             throw new UnauthorizedException("You need to be the owner of this audio track to delete it.");
         }
 
-        AudioRepository.Delete(audioTrack.Id);
+        _audioRepository.Delete(audioTrack.Id);
         File.Delete(audioTrack.Path);
     }
 
-    public static async Task<IEnumerable<AudioTrack>> FindAsync(string searchQuery, long limit = 10, DiscordGuild? guild = null, ulong? userId = null)
+    public async Task<IEnumerable<AudioTrack>> FindAsync(string searchQuery, long limit = 10, DiscordGuild? guild = null, ulong? userId = null)
     {
         var canGetNonGlobals = CanGetNonGlobals(userId, guild);
 
@@ -167,11 +185,11 @@ public static class AudioManager
         {
             if (limit == 1)
             {
-                var randomTrack = await AudioRepository.Random(tag, canGetNonGlobals);
+                var randomTrack = await _audioRepository.Random(tag, canGetNonGlobals);
                 return new List<AudioTrack> { randomTrack };
             }
 
-            return AudioRepository.All(tag).Where(t => canGetNonGlobals || t.IsGlobal );
+            return _audioRepository.All(tag).Where(t => canGetNonGlobals || t.IsGlobal );
         }
 
         if (searchQuery == "!!" && guild != null)
@@ -182,25 +200,25 @@ public static class AudioManager
 
         if (searchQuery.StartsWith('\"') && searchQuery.EndsWith('"'))
         {
-            return AudioRepository.FindAllByName(searchQuery.Trim('"'), tag).Where(t => canGetNonGlobals || t.IsGlobal );
+            return _audioRepository.FindAllByName(searchQuery.Trim('"'), tag).Where(t => canGetNonGlobals || t.IsGlobal );
         }
 
-        return (await AudioRepository.FindMany(searchQuery, limit, tag)).Where(t => canGetNonGlobals || t.IsGlobal );
+        return (await _audioRepository.FindMany(searchQuery, limit, tag)).Where(t => canGetNonGlobals || t.IsGlobal );
     }
 
-    public static AudioTrack? FindById(string id)
+    public AudioTrack? FindById(string id)
     {
-        return AudioRepository.FindById(id);
+        return _audioRepository.FindById(id);
     }
 
-    public static IEnumerable<AudioTrack> GetNewTracksAsync(long limit = 10)
+    public IEnumerable<AudioTrack> GetNewTracksAsync(long limit = 10)
     {
-        return AudioRepository.GetOrderedByDate(limit);
+        return _audioRepository.GetOrderedByDate(limit);
     }
 
-    public static DateTimeOffset GetLatestUpdateTime()
+    public DateTimeOffset GetLatestUpdateTime()
     {
-        var latestModifiedTrack = AudioRepository.GetOrderedByModified(1).FirstOrDefault();
+        var latestModifiedTrack = _audioRepository.GetOrderedByModified(1).FirstOrDefault();
         if (latestModifiedTrack == null || latestModifiedTrack.LastModifiedAt == null)
         {
             return DateTimeOffset.UtcNow;
@@ -209,19 +227,19 @@ public static class AudioManager
         return (DateTimeOffset) latestModifiedTrack.LastModifiedAt;
     }
 
-    public static IEnumerable<AudioTrack>? GetLastPlayedTracks(DiscordGuild guild)
+    public IEnumerable<AudioTrack>? GetLastPlayedTracks(DiscordGuild guild)
     {
-        return LastPlayedTracks.TryGetValue(guild.Id, out var tracks) ? tracks.Reverse() : null;
+        return _lastPlayedTracks.TryGetValue(guild.Id, out var tracks) ? tracks.Reverse() : null;
     }
 
-    public static IEnumerable<RecentAudioTrack> GetFrequentlyUsedTracks(DiscordUser user)
+    public IEnumerable<RecentAudioTrack> GetFrequentlyUsedTracks(DiscordUser user)
     {
         return GetFrequentlyUsedTracks(user.Id);
     }
 
-    public static IEnumerable<RecentAudioTrack> GetFrequentlyUsedTracks(ulong userId)
+    public IEnumerable<RecentAudioTrack> GetFrequentlyUsedTracks(ulong userId)
     {
-        var recents = AudioPlaybackLogRepository.GetGlobalLog()
+        var recents = _audioPlaybackLogRepository.GetGlobalLog()
                                                 .GroupBy(l => l.AudioTrack.Id)
                                                 .OrderBy(g => g.Count())
                                                 .Take(50)
@@ -233,15 +251,15 @@ public static class AudioManager
         return recents;
     }
 
-    public static IEnumerable<RecentAudioTrack> GetRecentAudioTracks(DiscordUser user)
+    public IEnumerable<RecentAudioTrack> GetRecentAudioTracks(DiscordUser user)
     {
         return GetRecentAudioTracks(user.Id);
     }
 
-    public static IEnumerable<RecentAudioTrack> GetRecentAudioTracks(ulong userId)
+    public IEnumerable<RecentAudioTrack> GetRecentAudioTracks(ulong userId)
     {
         var canGetNonGlobals = CanGetNonGlobals(userId);
-        var recents = AudioPlaybackLogRepository.GetGlobalLog()
+        var recents = _audioPlaybackLogRepository.GetGlobalLog()
                                                 .Where(l => canGetNonGlobals || l.AudioTrack.IsGlobal)
                                                 .OrderByDescending(l => l.Timestamp)
                                                 .DistinctBy(l => l.AudioTrack.Id)
@@ -250,9 +268,9 @@ public static class AudioManager
         return recents;
     }
 
-    private static async Task<LavalinkPlayer> GetLavalinkConnection(DiscordGuild guild)
+    private async Task<LavalinkPlayer> GetLavalinkConnection(DiscordGuild guild)
     {
-        var result = await AudioService.Players.RetrieveAsync(guild.Id, null, PlayerFactory.Default, Options.Create(new LavalinkPlayerOptions()));
+        var result = await _audioService.Players.RetrieveAsync(guild.Id, null, PlayerFactory.Default, Microsoft.Extensions.Options.Options.Create(new LavalinkPlayerOptions()));
         
         var connection = result.Player;
 
@@ -280,13 +298,13 @@ public static class AudioManager
         return connection;
     }
 
-    private static bool CanGetNonGlobals(ulong? userId, DiscordGuild? guild = null)
+    private bool CanGetNonGlobals(ulong? userId, DiscordGuild? guild = null)
     {
         bool canUserGetNonGlobals = false;
         bool canGuildGetNonGlobals = false;
         if (userId.HasValue)
         {
-            var globalTesters = SettingsRepository.GetValue<string>(Constants.GlobalTesters);
+            var globalTesters = _settingsRepository.GetValue<string>(Constants.GlobalTesters);
 
             if (!string.IsNullOrWhiteSpace(globalTesters))
             {
@@ -297,7 +315,7 @@ public static class AudioManager
                 }
             }
 
-            var botGuilds = Client.Guilds;
+            var botGuilds = _client.Guilds;
             var whitelistedMembers = botGuilds.Where(g => Constants.WhitelistedGuilds.Contains(g.Key))
                                         .Select(g => g.Value.Members);
             canUserGetNonGlobals = whitelistedMembers.Any(g => g.ContainsKey(userId.Value));
@@ -310,15 +328,13 @@ public static class AudioManager
 
         return canUserGetNonGlobals || canGuildGetNonGlobals;
     }
-    // TODO Add summary docs for everything
 
     #region Join
 
-    public static async Task<LavalinkPlayer> JoinAsync(DiscordChannel channel)
+    public async Task<LavalinkPlayer> JoinAsync(DiscordChannel channel)
     {
         if (channel.Type != ChannelType.Voice)
         {
-            // Handle cases where one text and one voice channel may exist with the same name.
             var alternateChannel = channel.Guild.Channels.Values.FirstOrDefault(c =>
                 string.Equals(c.Name, channel.Name, StringComparison.CurrentCultureIgnoreCase) &&
                 c.Type == ChannelType.Voice);
@@ -331,7 +347,7 @@ public static class AudioManager
             channel = alternateChannel;
         }
 
-        var result = await AudioService.Players.RetrieveAsync(channel.Guild.Id, channel.Id, PlayerFactory.Default, Options.Create(new LavalinkPlayerOptions()), new PlayerRetrieveOptions { ChannelBehavior = PlayerChannelBehavior.Join });
+        var result = await _audioService.Players.RetrieveAsync(channel.Guild.Id, channel.Id, PlayerFactory.Default, Microsoft.Extensions.Options.Options.Create(new LavalinkPlayerOptions()), new PlayerRetrieveOptions { ChannelBehavior = PlayerChannelBehavior.Join });
         var connection = result.Player;
         if (connection == null)
         {
@@ -342,9 +358,9 @@ public static class AudioManager
         return connection;
     }
 
-    public static async Task JoinChannelIdAsync(ulong channelId)
+    public async Task JoinChannelIdAsync(ulong channelId)
     {
-        var guild = Client.Guilds.Values.FirstOrDefault(g => g.Channels.ContainsKey(channelId));
+        var guild = _client.Guilds.Values.FirstOrDefault(g => g.Channels.ContainsKey(channelId));
         if (guild == null)
         {
             Log.Warning("Guild containing a channel with ID: {Id} not found", channelId);
@@ -355,14 +371,13 @@ public static class AudioManager
         await JoinAsync(channel);
     }
 
-    public static async Task JoinGuildIdAsync(ulong guildId)
+    public async Task JoinGuildIdAsync(ulong guildId)
     {
-        await JoinGuildAsync(Client.FindGuild(guildId));
+        await JoinGuildAsync(_client.FindGuild(guildId));
     }
 
-    public static async Task JoinGuildAsync(DiscordGuild guild)
+    public async Task JoinGuildAsync(DiscordGuild guild)
     {
-        // TODO Add option to choose a default channel for a guild and join that if no user is in any voice channel.
         var mostCrowdedVoiceChannel = guild.Channels.VoiceChannelWithMostNonBotUsers();
         if (mostCrowdedVoiceChannel == null)
         {
@@ -377,7 +392,7 @@ public static class AudioManager
 
     #region Leave
 
-    public static async Task LeaveAsync(DiscordGuild guild)
+    public async Task LeaveAsync(DiscordGuild guild)
     {
         var connection = await GetLavalinkConnection(guild);
         if (connection == null)
@@ -390,18 +405,18 @@ public static class AudioManager
         Log.Information("Voice disconnected from {Channel}", currentChannel);
     }
 
-    public static async Task LeaveAsync(ulong guildId)
+    public async Task LeaveAsync(ulong guildId)
     {
-        await LeaveAsync(Client.FindGuild(guildId));
+        await LeaveAsync(_client.FindGuild(guildId));
     }
 
     #endregion
 
     #region Play
 
-    public static async Task<int> PlayAsync(AudioTrack audioTrack, DiscordGuild guild, DiscordMember member, CommandContext? ctx = null)
+    public async Task<int> PlayAsync(AudioTrack audioTrack, DiscordGuild guild, DiscordMember member, CommandContext? ctx = null)
     {        
-        if (!UserManager.CanPlayAudio(member, audioTrack, out var reason))
+        if (!_userManager.CanPlayAudio(member, audioTrack, out var reason))
         {
             Log.Warning("{Member} can not play the audio {AudioTrack}", member, audioTrack);
             Log.Warning("Reason: {Reason}", reason);
@@ -417,10 +432,10 @@ public static class AudioManager
             throw new FileNotFoundException($"File does not exist: {audioFile.FullName}");
         }
 
-        if (!LastPlayedTracks.TryGetValue(guild.Id, out Queue<AudioTrack>? value))
+        if (!_lastPlayedTracks.TryGetValue(guild.Id, out Queue<AudioTrack>? value))
         {
             value = new Queue<AudioTrack>(10);
-            LastPlayedTracks.Add(guild.Id, value);
+            _lastPlayedTracks.Add(guild.Id, value);
         }
 
         if (value.Count >= 10)
@@ -431,25 +446,24 @@ public static class AudioManager
         value.Enqueue(audioTrack);
 
         await connection.PlayFileAsync(new FileInfo(audioTrack.Path));
-        // TODO If PlayAsync does not return immediately and waits for playback to end (not likely), user could end up with a negative balance.
-        var audioPrice = audioTrack.CalculateAndSetPrice();
-        UserManager.DeductPoints(member, audioPrice);
+        var audioPrice = audioTrack.CalculateAndSetPrice(_settingsRepository);
+        _audioRepository.Update(audioTrack);
+        _userManager.DeductPoints(member, audioPrice);
         Log.Information("User {User} has played {AudioTrack} for {AudioPrice}", member, audioTrack, audioPrice);
-        // TODO Why not add price information here?
         var playbackLog = new AudioPlaybackLog()
         {
             Timestamp = DateTime.UtcNow,
             AudioTrack = audioTrack,
             UserId = member.Id
         };
-        AudioPlaybackLogRepository.Add(playbackLog);
-        await HubContext.Clients.All.ReceiveRecentPlay(audioTrack.Id.ToString());
+        await _audioPlaybackLogRepository.AddAsync(playbackLog);
+        await _hubContext.Clients.All.ReceiveRecentPlay(audioTrack.Id.ToString());
         return audioPrice;
     }
 
-    public static async Task PlayAsync(Uri audioUrl, DiscordGuild guild, DiscordMember member)
+    public async Task PlayAsync(Uri audioUrl, DiscordGuild guild, DiscordMember member)
     {
-        if (UserManager.IsMuted(member))
+        if (_userManager.IsMuted(member))
         {
             Log.Warning("{Member} can not play the audio {AudioUrl}", member, audioUrl);
             throw new UnauthorizedException($"{member} can not play the audio {audioUrl}");
@@ -457,7 +471,7 @@ public static class AudioManager
 
         var connection = await GetLavalinkConnection(guild);
 
-        var result = await AudioService.Tracks.LoadTrackAsync(audioUrl.ToString(), TrackSearchMode.YouTube);
+        var result = await _audioService.Tracks.LoadTrackAsync(audioUrl.ToString(), TrackSearchMode.YouTube);
 
         if (result == null)
         {
@@ -468,7 +482,7 @@ public static class AudioManager
         await connection.PlayAsync(result);
     }
 
-    public static async Task<int> PlayAsync(string audioName, DiscordGuild guild, DiscordMember member, CommandContext? ctx = null,
+    public async Task<int> PlayAsync(string audioName, DiscordGuild guild, DiscordMember member, CommandContext? ctx = null,
         bool searchById = false)
     {
         if (Uri.TryCreate(audioName, UriKind.Absolute, out var uriResult))
@@ -481,7 +495,7 @@ public static class AudioManager
         }
 
         var audioTrack = searchById
-            ? AudioRepository.FindById(audioName)
+            ? _audioRepository.FindById(audioName)
             : (await FindAsync(audioName, 1, guild)).FirstOrDefault();
         if (audioTrack == null)
         {
@@ -493,78 +507,12 @@ public static class AudioManager
         return await PlayAsync(audioTrack, guild, member, ctx);
     }
 
-    public static async Task<int> PlayAsync(string audioNameOrId, ulong guildId, ulong memberId,
+    public async Task<int> PlayAsync(string audioNameOrId, ulong guildId, ulong memberId,
         bool searchById = false)
     {
-        var guild = Client.FindGuild(guildId);
+        var guild = _client.FindGuild(guildId);
         var member = guild.Members[memberId];
         return await PlayAsync(audioNameOrId, guild, member, searchById: searchById);
-    }
-
-    #endregion
-
-    #region Points
-    /// <summary>
-    /// Calculates the price decrease on an audio track based on previous price and last price update date,
-    /// and updates the price information of the track.
-    /// <para />
-    /// Should be called if checking the current price, or there is another need to update the price property of the audio track.
-    /// </summary>
-    /// <returns>The price that would have been used if it were played.</returns>
-    public static int CalculateAndDecreasePrice(this AudioTrack audioTrack)
-    {
-        var basePrice = SettingsRepository.GetValue<int>(Constants.DefaultScore);
-        if (audioTrack.LastPriceUpdateAt != null)
-        {
-            var roundedMinutesSinceLastPriceUpdate = (int)(DateTime.UtcNow - audioTrack.LastPriceUpdateAt).Value.TotalMinutes;
-            if (roundedMinutesSinceLastPriceUpdate > 0)
-            {
-                var priceDecreasePerMinute = SettingsRepository.GetValue<int>(Constants.PriceDecreasePerMinute);
-                var priceDecrease = roundedMinutesSinceLastPriceUpdate * priceDecreasePerMinute;
-
-                if (audioTrack.Price - priceDecrease < 0)
-                {
-                    audioTrack.Price = 0;
-                }
-                else
-                {
-                    audioTrack.Price -= priceDecrease;
-                }
-
-                audioTrack.LastPriceUpdateAt = DateTime.UtcNow;
-            }
-        }
-        var effectivePrice = audioTrack.Price + basePrice;
-        AudioRepository.Update(audioTrack);
-        return effectivePrice;
-    }
-
-    private static void CalculateAndIncreasePrice(this AudioTrack audioTrack)
-    {
-        var priceIncreasePerUse = SettingsRepository.GetValue<int>(Constants.PriceIncreasePerUse);
-        var priceMaximum = SettingsRepository.GetValue<int>(Constants.PriceMaximum);
-        if (audioTrack.Price + priceIncreasePerUse > priceMaximum)
-        {
-            audioTrack.Price = priceMaximum;
-        }
-        else
-        {
-            audioTrack.Price += priceIncreasePerUse;   
-        }
-        audioTrack.LastPriceUpdateAt = DateTime.UtcNow;
-        AudioRepository.Update(audioTrack);
-    }
-
-    /// <summary>
-    /// Decreases the price of the audio track according to last update date, if needed, and returns the up-to-date usage cost for the track.
-    /// Also increases the price of the track for future uses.
-    /// </summary>
-    /// <returns></returns>
-    public static int CalculateAndSetPrice(this AudioTrack audioTrack)
-    {
-        var effectivePrice = audioTrack.CalculateAndDecreasePrice();
-        audioTrack.CalculateAndIncreasePrice();
-        return effectivePrice;
     }
 
     #endregion

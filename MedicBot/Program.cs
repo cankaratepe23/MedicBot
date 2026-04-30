@@ -10,12 +10,12 @@ using MedicBot.Commands;
 using MedicBot.EventHandler;
 using MedicBot.Hub;
 using MedicBot.Manager;
+using MedicBot.Options;
 using MedicBot.Repository;
 using MedicBot.Utils;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
@@ -25,7 +25,6 @@ namespace MedicBot;
 
 internal static class Program
 {
-    public static readonly HttpClient Client = new();
     private static readonly CancellationTokenSource CancellationTokenSource = new();
     private static DiscordClient? _client;
 
@@ -36,15 +35,19 @@ internal static class Program
 
     private static async Task ConfigureAsync()
     {
-        // Configuration
-
         #region WebApp Config
 
         var builder = WebApplication.CreateBuilder();
+        WriteStartupDebug("Host environment: {EnvironmentName}", builder.Environment.EnvironmentName);
+        WriteStartupDebug("Raw ASPNETCORE_ENVIRONMENT: {Value}", GetNonEmptyEnvironmentVariable("ASPNETCORE_ENVIRONMENT"));
+        WriteStartupDebug("Raw DOTNET_ENVIRONMENT: {Value}", GetNonEmptyEnvironmentVariable("DOTNET_ENVIRONMENT"));
+        WriteStartupDebug("Raw DOTNET_LAUNCH_PROFILE: {Value}", GetNonEmptyEnvironmentVariable("DOTNET_LAUNCH_PROFILE"));
+        WriteStartupDebug("Configuration sources: {Sources}", string.Join(", ", builder.Configuration.Sources.Select(source => source.GetType().Name)));
         builder.Services.AddControllers();
         builder.Services.AddSignalR().AddJsonProtocol();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
+        builder.Services.AddHttpClient();
         builder.Services.AddCors(options =>
         {
             options.AddPolicy("MedicBotPolicy", policyBuilder =>
@@ -65,20 +68,33 @@ internal static class Program
         }
 
         builder.Configuration.AddEnvironmentVariables("MedicBot_");
-        var clientId = Environment.GetEnvironmentVariable(Constants.OAuthClientIdEnvironmentVariableName);
-        var clientSecret = Environment.GetEnvironmentVariable(Constants.OAuthClientSecretEnvironmentVariableName);
-        if (clientId == null || clientSecret == null)
+        WriteStartupDebug("Added prefixed environment variable source: MedicBot_");
+        WriteStartupDebug("Config key presence: Discord:Token={DiscordToken}, Discord:OAuthClientId={DiscordClientId}, Discord:OAuthClientSecret={DiscordClientSecret}, Auth:JwtSecret={JwtSecret}, MongoDb:ConnectionString={MongoConnectionString}",
+            HasConfiguredValue(builder.Configuration, "Discord:Token"),
+            HasConfiguredValue(builder.Configuration, "Discord:OAuthClientId"),
+            HasConfiguredValue(builder.Configuration, "Discord:OAuthClientSecret"),
+            HasConfiguredValue(builder.Configuration, "Auth:JwtSecret"),
+            HasConfiguredValue(builder.Configuration, "MongoDb:ConnectionString"));
+
+        // Bind options from configuration (user secrets, environment variables, appsettings)
+        builder.Services.Configure<DiscordOptions>(builder.Configuration.GetSection(DiscordOptions.SectionName));
+        builder.Services.Configure<AuthOptions>(builder.Configuration.GetSection(AuthOptions.SectionName));
+
+        var discordOptions = builder.Configuration.GetSection(DiscordOptions.SectionName).Get<DiscordOptions>();
+        if (string.IsNullOrEmpty(discordOptions?.Token))
         {
-            throw new InvalidOperationException("Discord OAuth environment variables are not set.");
+            throw new InvalidOperationException("Discord bot token is not configured. Set 'Discord:Token' via user secrets or environment variables.");
+        }
+        if (string.IsNullOrEmpty(discordOptions.OAuthClientId) || string.IsNullOrEmpty(discordOptions.OAuthClientSecret))
+        {
+            throw new InvalidOperationException("Discord OAuth is not configured. Set 'Discord:OAuthClientId' and 'Discord:OAuthClientSecret' via user secrets or environment variables.");
         }
 
-        var jwtSecret = Environment.GetEnvironmentVariable(Constants.JwtTokenSecretEnvironmentVariableName);
-        if (string.IsNullOrEmpty(jwtSecret))
+        var authOptions = builder.Configuration.GetSection(AuthOptions.SectionName).Get<AuthOptions>();
+        if (string.IsNullOrEmpty(authOptions?.JwtSecret))
         {
-            throw new InvalidOperationException("JWT secret environment variable is not set.");
+            throw new InvalidOperationException("JWT secret is not configured. Set 'Auth:JwtSecret' via user secrets or environment variables.");
         }
-
-        TokenManager.Init(jwtSecret);
 
         builder.Services.Configure<ForwardedHeadersOptions>(options =>
         {
@@ -113,7 +129,7 @@ internal static class Program
                     ValidateIssuerSigningKey = true,
                     ValidateIssuer = false,
                     ValidateAudience = false,
-                    IssuerSigningKey = new SymmetricSecurityKey(Convert.FromBase64String(jwtSecret)),
+                    IssuerSigningKey = new SymmetricSecurityKey(Convert.FromBase64String(authOptions.JwtSecret)),
                     ClockSkew = TimeSpan.Zero
                 };
 
@@ -154,8 +170,8 @@ internal static class Program
             })
             .AddDiscord(options =>
             {
-                options.ClientId = clientId;
-                options.ClientSecret = clientSecret;
+                options.ClientId = discordOptions.OAuthClientId;
+                options.ClientSecret = discordOptions.OAuthClientSecret;
                 options.CorrelationCookie.SameSite = SameSiteMode.None;
                 options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
             });
@@ -170,23 +186,41 @@ internal static class Program
             });
         });
 
+        // MongoDB
         var mongoDbSettings = builder.Configuration.GetSection("MongoDb").Get<MongoDbSettings>();
         if (mongoDbSettings?.ConnectionString is null)
         {
-            Log.Error("Failed to read MongoDB configuration from appsettings.json");
-            return;
+            throw new InvalidOperationException("MongoDB connection string is not configured. Set 'MongoDb:ConnectionString' via user secrets or environment variables.");
         }
 
         var mongoClientSettings = MongoClientSettings.FromConnectionString(mongoDbSettings.ConnectionString);
         var mongoClient = new MongoClient(mongoClientSettings);
-        var mongoDb = mongoClient.GetDatabase(mongoDbSettings.Database);
-        if (mongoDb is null)
-        {
-            Log.Error("Failed to connect to MongoDB database");
-            return;
-        }
+        var mongoDb = mongoClient.GetDatabase(mongoDbSettings.Database)
+            ?? throw new InvalidOperationException("Failed to connect to MongoDB database '" + mongoDbSettings.Database + "'.");
 
-        MongoDbManager.Database = mongoDb;
+        builder.Services.AddSingleton<IMongoDatabase>(mongoDb);
+
+        // Repositories
+        builder.Services.AddSingleton<ISettingsRepository, SettingsRepository>();
+        builder.Services.AddSingleton<IAudioRepository, AudioRepository>();
+        builder.Services.AddSingleton<IAudioPlaybackLogRepository, AudioPlaybackLogRepository>();
+        builder.Services.AddSingleton<IImageRepository, ImageRepository>();
+        builder.Services.AddSingleton<IRefreshTokenRepository, RefreshTokenRepository>();
+        builder.Services.AddSingleton<IUserFavoritesRepository, UserFavoritesRepository>();
+        builder.Services.AddSingleton<IUserMuteRepository, UserMuteRepository>();
+        builder.Services.AddSingleton<IUserPointsRepository, UserPointsRepository>();
+
+        // Event Handlers
+        builder.Services.AddSingleton<IVoiceStateHandler, VoiceStateHandler>();
+        builder.Services.AddSingleton<BotSettingHandler>();
+
+        // Managers
+        builder.Services.AddSingleton<ITokenManager, TokenManager>();
+        builder.Services.AddSingleton<IUserManager, UserManager>();
+        builder.Services.AddSingleton<IAudioManager, AudioManager>();
+        builder.Services.AddSingleton<IImageManager, ImageManager>();
+        builder.Services.AddSingleton<IImportExportManager, ImportExportManager>();
+        builder.Services.AddSingleton<IMiscManager, MiscManager>();
 
         #region Discord Client Config
 
@@ -194,7 +228,7 @@ internal static class Program
 
         var discord = new DiscordClient(new DiscordConfiguration
         {
-            Token = Environment.GetEnvironmentVariable(Constants.BotTokenEnvironmentVariableName),
+            Token = discordOptions.Token,
             LoggerFactory = logFactory,
             Intents = DiscordIntents.All
         });
@@ -204,14 +238,13 @@ internal static class Program
         
         #region Lavalink Config
 
-        builder.Services.AddSingleton(_client);
+        builder.Services.AddSingleton(discord);
         builder.Services.AddLavalink();
         builder.Services.ConfigureLavalink(config =>
         {
             config.Passphrase = Constants.LavalinkPassword;
             config.BaseAddress = new Uri(Constants.LavalinkHttp);
             config.WebSocketUri = new Uri(Constants.LavalinkWebSocket);
-
         });
 
         #endregion
@@ -298,21 +331,15 @@ internal static class Program
             Directory.CreateDirectory(tempFilesPath);
         }
 
-
-        var hubContext = app.Services.GetService<IHubContext<PlaybackHub, IPlaybackClient>>();
-        if (hubContext == null)
-        {
-            // TODO: GetRequiredService throws an exception if service not found, use that instead?
-            throw new InvalidOperationException("Could not instantiate the SignalR Hub context");   
-        }
+        // Start Lavalink
         using (var scope = app.Services.CreateScope())
         {
             var audioService = scope.ServiceProvider.GetRequiredService<Lavalink4NET.IAudioService>();
             await audioService.StartAsync();
-            AudioManager.Init(discord, audioService, hubContext, audioTracksPath, tempFilesPath);
         }
-        ImageManager.Init(discord, imagesPath, tempFilesPath);
-        VoiceStateHandler.Init(discord);
+
+        // Resolve voice state handler for event wiring
+        var voiceStateHandler = app.Services.GetRequiredService<IVoiceStateHandler>();
 
         // Commands Init
         var commands = discord.UseCommandsNext(new CommandsNextConfiguration
@@ -345,13 +372,12 @@ internal static class Program
         }
 
         app.Lifetime.ApplicationStopping.Register(CleanupCallback);
-        discord.VoiceStateUpdated += VoiceStateHandler.DiscordOnVoiceStateUpdated;
+        discord.VoiceStateUpdated += voiceStateHandler.DiscordOnVoiceStateUpdated;
         discord.GuildDownloadCompleted += (_, _) =>
         {
-            VoiceStateHandler.StartTracking();
+            voiceStateHandler.StartTracking();
             return Task.CompletedTask;
         };
-
 
         // Startup
         await app.StartAsync();
@@ -372,10 +398,39 @@ internal static class Program
             return;
         }
 
-        VoiceStateHandler.ReloadTracking();
         await _client.DisconnectAsync();
         _client.Dispose();
         _client = null;
         CancellationTokenSource.Cancel();
+    }
+
+    private static bool HasConfiguredValue(IConfiguration configuration, string key)
+    {
+        return !string.IsNullOrWhiteSpace(configuration[key]);
+    }
+
+    private static string GetNonEmptyEnvironmentVariable(string variableName)
+    {
+        var value = Environment.GetEnvironmentVariable(variableName);
+        return string.IsNullOrWhiteSpace(value) ? "<not set>" : value;
+    }
+
+    private static void WriteStartupDebug(string messageTemplate, params object?[] propertyValues)
+    {
+        var renderedMessage = messageTemplate;
+        foreach (var propertyValue in propertyValues)
+        {
+            var placeholderStart = renderedMessage.IndexOf('{');
+            var placeholderEnd = renderedMessage.IndexOf('}', placeholderStart + 1);
+            if (placeholderStart < 0 || placeholderEnd < 0)
+            {
+                break;
+            }
+
+            renderedMessage = renderedMessage.Remove(placeholderStart, placeholderEnd - placeholderStart + 1)
+                .Insert(placeholderStart, propertyValue?.ToString() ?? "<null>");
+        }
+
+        Console.WriteLine($"[startup-debug] {renderedMessage}");
     }
 }
